@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, ApiError } from "@/lib/api-client"
 import { setTokens } from "@/lib/auth"
-import { ROUTES } from "@/lib/constants"
+import { ROUTES, ADMIN_ROLES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,11 +58,12 @@ export default function LoginPage() {
       const userData = await api.users.me()
       const allowed = ["provider", "owner", "admin"]
       if (userData.role_code && allowed.includes(userData.role_code)) {
-        router.push(ROUTES.DASHBOARD)
+        const isAdmin = ADMIN_ROLES.includes(userData.role_code as typeof ADMIN_ROLES[number])
+        router.push(isAdmin ? ROUTES.ADMIN_DASHBOARD : ROUTES.PROMOTIONS)
       } else {
         throw new ApiError(
           403,
-          "No tienes permisos de proveedor. Contacta al administrador.",
+          "No tienes permisos para acceder al panel. Contacta al administrador.",
         )
       }
     } catch (err) {

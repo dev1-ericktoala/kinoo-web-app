@@ -1,0 +1,163 @@
+import { apiClient } from "./api-client"
+import { getAccessToken } from "./auth"
+import { API_BASE_URL } from "./constants"
+import type {
+  DashboardSummary,
+  UsersAnalytics,
+  PetsAnalytics,
+  PromotionsAnalytics,
+  PointsAnalytics,
+  ReferralsAnalytics,
+  EngagementAnalytics,
+  EmergencyCreditsAnalytics,
+  PaginatedAuditLogs,
+  PaginatedEvents,
+  PaginatedActiveCredits,
+  PaginatedKnowledgeDocuments,
+  KnowledgeDocumentResponse,
+  KnowledgeDocumentDetail,
+  KnowledgeDocumentUpdate,
+  Promotion,
+  PromotionReviewAction,
+} from "@/types"
+
+function buildQuery(params: Record<string, unknown>): string {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v != null && v !== "") qs.set(k, String(v))
+  })
+  const str = qs.toString()
+  return str ? `?${str}` : ""
+}
+
+export const adminApi = {
+  dashboard: {
+    summary: () => apiClient<DashboardSummary>("/admin/dashboard/summary"),
+    users: () => apiClient<UsersAnalytics>("/admin/dashboard/users"),
+    pets: () => apiClient<PetsAnalytics>("/admin/dashboard/pets"),
+    promotions: () =>
+      apiClient<PromotionsAnalytics>("/admin/dashboard/promotions"),
+    points: () => apiClient<PointsAnalytics>("/admin/dashboard/points"),
+    referrals: () =>
+      apiClient<ReferralsAnalytics>("/admin/dashboard/referrals"),
+    engagement: () =>
+      apiClient<EngagementAnalytics>("/admin/dashboard/engagement"),
+    emergencyCredits: () =>
+      apiClient<EmergencyCreditsAnalytics>(
+        "/admin/dashboard/emergency-credits",
+      ),
+  },
+
+  auditLogs: (params: {
+    page?: number
+    limit?: number
+    table_name?: string
+    action?: string
+    search?: string
+    date_from?: string
+    date_to?: string
+  }) => apiClient<PaginatedAuditLogs>(`/admin/audit-logs${buildQuery(params)}`),
+
+  events: (params: {
+    page?: number
+    limit?: number
+    event_type?: string
+    entity_type?: string
+    search?: string
+    date_from?: string
+    date_to?: string
+  }) => apiClient<PaginatedEvents>(`/admin/events${buildQuery(params)}`),
+
+  credits: (params: {
+    page?: number
+    limit?: number
+    status?: string
+    search?: string
+    sort_by?: string
+    sort_order?: string
+  }) =>
+    apiClient<PaginatedActiveCredits>(
+      `/admin/emergency-credits${buildQuery(params)}`,
+    ),
+
+  activeCredits: (params: { page?: number; limit?: number }) =>
+    apiClient<PaginatedActiveCredits>(
+      `/admin/emergency-credits/active${buildQuery(params)}`,
+    ),
+
+  knowledge: {
+    list: (params?: {
+      page?: number
+      limit?: number
+      category?: string
+      status?: string
+      search?: string
+    }) =>
+      apiClient<PaginatedKnowledgeDocuments>(
+        `/admin/knowledge/documents${buildQuery(params || {})}`,
+      ),
+
+    get: (id: string) =>
+      apiClient<KnowledgeDocumentDetail>(
+        `/admin/knowledge/documents/${id}`,
+      ),
+
+    upload: async (
+      file: File,
+      title: string,
+      description?: string,
+      category?: string,
+    ): Promise<KnowledgeDocumentResponse> => {
+      const params = new URLSearchParams({ title })
+      if (description) params.set("description", description)
+      if (category) params.set("category", category)
+
+      const form = new FormData()
+      form.append("file", file)
+
+      const token = getAccessToken()
+      const res = await fetch(
+        `${API_BASE_URL}/admin/knowledge/documents?${params.toString()}`,
+        {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: form,
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || "Error al subir documento")
+      }
+      return res.json()
+    },
+
+    update: (id: string, data: KnowledgeDocumentUpdate) =>
+      apiClient<KnowledgeDocumentResponse>(
+        `/admin/knowledge/documents/${id}`,
+        { method: "PATCH", body: JSON.stringify(data) },
+      ),
+
+    delete: (id: string) =>
+      apiClient<void>(`/admin/knowledge/documents/${id}`, {
+        method: "DELETE",
+      }),
+
+    reprocess: (id: string) =>
+      apiClient<KnowledgeDocumentResponse>(
+        `/admin/knowledge/documents/${id}/reprocess`,
+        { method: "POST" },
+      ),
+  },
+
+  promotionReview: {
+    listPending: (params?: { search?: string }) =>
+      apiClient<Promotion[]>(
+        `/admin/promotions/pending${params ? buildQuery(params) : ""}`,
+      ),
+    review: (promotionId: string, data: PromotionReviewAction) =>
+      apiClient<Promotion>(`/admin/promotions/${promotionId}/review`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+}
