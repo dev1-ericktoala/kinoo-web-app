@@ -412,6 +412,15 @@ export interface Breed {
 
 // ─── Pet Targeting ──────────────────────────────────────
 
+// API value lists. Backend valida con 422 si llega algo fuera de estos sets.
+export const PET_SEX_VALUES = ["male", "female"] as const
+export const PET_SPECIES_VALUES = ["dog", "cat"] as const
+export const PET_AGE_VALUES = ["puppy", "adult", "senior"] as const
+
+export type PetSex = (typeof PET_SEX_VALUES)[number]
+export type PetSpecies = (typeof PET_SPECIES_VALUES)[number]
+export type PetAgeCategory = (typeof PET_AGE_VALUES)[number]
+
 export interface PetFilters {
   species?: string[]
   sex?: string[]
@@ -437,4 +446,31 @@ export interface PetFilters {
     has_vitamins?: boolean
     has_supplements?: boolean
   }
+}
+
+// ─── User Targeting ─────────────────────────────────────
+
+export const USER_GENDER_VALUES = [
+  "female",
+  "male",
+  "other",
+  "prefer_not_say",
+] as const
+export const USER_PET_MEANING_VALUES = [
+  "adopcion",
+  "rescatista",
+  "mis_hijos",
+  "parte_de_mi_familia",
+  "compania",
+  "solo_mis_mascotas",
+  "companero_de_trabajo",
+  "terapia",
+] as const
+
+export type UserGender = (typeof USER_GENDER_VALUES)[number]
+export type UserPetMeaning = (typeof USER_PET_MEANING_VALUES)[number]
+
+export interface UserFilters {
+  pet_meanings?: string[]
+  genders?: string[]
 }

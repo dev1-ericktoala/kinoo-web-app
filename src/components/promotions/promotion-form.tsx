@@ -28,10 +28,23 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { DatePicker } from "@/components/shared/date-picker"
-import { PetTargetingSection } from "./pet-targeting-section"
+import {
+  PetTargetingSection,
+  sanitizePetFilters,
+} from "./pet-targeting-section"
+import {
+  UserTargetingSection,
+  sanitizeUserFilters,
+} from "./user-targeting-section"
 import { LocationPicker } from "./location-picker"
-import { Loader2, ArrowLeft, MapPin } from "lucide-react"
+import { Loader2, ArrowLeft, Info, MapPin } from "lucide-react"
 import type {
   Promotion,
   PromotionType,
@@ -39,6 +52,7 @@ import type {
   CreatePromotionRequest,
   UpdatePromotionRequest,
   PetFilters,
+  UserFilters,
 } from "@/types"
 
 // ─── Schema ──────────────────────────────────────────────
@@ -92,6 +106,10 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
   const [petFilters, setPetFilters] = useState<PetFilters>(
     () =>
       (initialData?.targeting?.pet_filters as PetFilters | undefined) || {},
+  )
+  const [userFilters, setUserFilters] = useState<UserFilters>(
+    () =>
+      (initialData?.targeting?.user_filters as UserFilters | undefined) || {},
   )
 
   const form = useForm<FormValues>({
@@ -167,9 +185,15 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
     setIsSubmitting(true)
 
     const targeting: Record<string, unknown> = {}
-    // Merge pet_filters only if the user set at least one filter
-    if (Object.keys(petFilters).length > 0) {
-      targeting.pet_filters = petFilters
+    // Sanitize: drop empty arrays and any value outside the API allow-list
+    // so the backend doesn't 422 on stale or unknown values.
+    const cleanedPetFilters = sanitizePetFilters(petFilters)
+    if (Object.keys(cleanedPetFilters).length > 0) {
+      targeting.pet_filters = cleanedPetFilters
+    }
+    const cleanedUserFilters = sanitizeUserFilters(userFilters)
+    if (Object.keys(cleanedUserFilters).length > 0) {
+      targeting.user_filters = cleanedUserFilters
     }
 
     const payload = {
@@ -546,8 +570,33 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
         </CardContent>
       </Card>
 
-      {/* Pet Targeting */}
-      <PetTargetingSection value={petFilters} onChange={setPetFilters} />
+      {/* Targeting — user + pet filters */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <h3 className="text-sm font-semibold">Segmentación de la audiencia</h3>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Cómo funcionan los filtros"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs">
+                Mostraremos la promoción a usuarios que coincidan en TODOS los
+                filtros activos. Dentro de cada filtro basta con que cumplan
+                UNO de los valores seleccionados.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <UserTargetingSection value={userFilters} onChange={setUserFilters} />
+        <PetTargetingSection value={petFilters} onChange={setPetFilters} />
+      </div>
 
       {/* Service-specific fields */}
       {watchType === "service" && (

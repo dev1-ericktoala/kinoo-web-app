@@ -26,7 +26,16 @@ import {
 } from "@/components/ui/collapsible"
 import { Separator } from "@/components/ui/separator"
 import { ChevronDown, PawPrint, X } from "lucide-react"
-import type { Breed, PetFilters } from "@/types"
+import {
+  PET_AGE_VALUES,
+  PET_SEX_VALUES,
+  PET_SPECIES_VALUES,
+  type Breed,
+  type PetAgeCategory,
+  type PetFilters,
+  type PetSex,
+  type PetSpecies,
+} from "@/types"
 
 // ─── Constants (UI labels → API values) ─────────────────
 
@@ -36,11 +45,10 @@ const SPECIES_OPTIONS = [
   { label: "Gato", value: "cat" },
 ] as const
 
-const SEX_OPTIONS = [
-  { label: "Ambos", value: "" },
+const SEX_OPTIONS: ReadonlyArray<{ label: string; value: PetSex }> = [
   { label: "Macho", value: "male" },
   { label: "Hembra", value: "female" },
-] as const
+]
 
 const AGE_OPTIONS = [
   { label: "Todas", value: "" },
@@ -206,30 +214,39 @@ export function PetTargetingSection({
                 </Select>
               </div>
 
-              {/* Sex */}
+              {/* Sex (multi) */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Sexo</Label>
-                <Select
-                  value={value.sex?.[0] || ""}
-                  onValueChange={(v) => {
-                    if (v && v !== "_all") {
-                      update({ sex: [v] })
-                    } else {
-                      remove("sex")
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Ambos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEX_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value || "_all"} value={opt.value || "_all"}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-3 pt-1.5">
+                  {SEX_OPTIONS.map((opt) => {
+                    const checked = (value.sex || []).includes(opt.value)
+                    return (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            const current = value.sex || []
+                            const next = v
+                              ? Array.from(new Set([...current, opt.value]))
+                              : current.filter((s) => s !== opt.value)
+                            if (next.length > 0) {
+                              update({ sex: next })
+                            } else {
+                              remove("sex")
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{opt.label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Si no marcas ninguno se mostrará a ambos sexos.
+                </p>
               </div>
 
               {/* Age */}
@@ -731,4 +748,41 @@ export function PetTargetingSection({
       </Collapsible>
     </Card>
   )
+}
+
+// ─── Sanitization ───────────────────────────────────────
+
+function pickAllowed<T extends string>(
+  arr: string[] | undefined,
+  allowed: readonly T[],
+): T[] {
+  if (!arr) return []
+  const set = new Set<string>(allowed)
+  return arr.filter((v): v is T => set.has(v))
+}
+
+/**
+ * Filter the pet filters to only contain backend-allowed values for the
+ * enum-style fields (species/sex/age_categories). Other fields pass through.
+ * Empty arrays are dropped so unset filters don't leak into the payload.
+ */
+export function sanitizePetFilters(input: PetFilters): PetFilters {
+  const out: PetFilters = { ...input }
+
+  const species = pickAllowed<PetSpecies>(input.species, PET_SPECIES_VALUES)
+  if (species.length > 0) out.species = species
+  else delete out.species
+
+  const sex = pickAllowed<PetSex>(input.sex, PET_SEX_VALUES)
+  if (sex.length > 0) out.sex = sex
+  else delete out.sex
+
+  const ages = pickAllowed<PetAgeCategory>(
+    input.age_categories,
+    PET_AGE_VALUES,
+  )
+  if (ages.length > 0) out.age_categories = ages
+  else delete out.age_categories
+
+  return out
 }
