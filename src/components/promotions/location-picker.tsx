@@ -3,12 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader"
 import { api, ApiError } from "@/lib/api-client"
+import { useProviderCredits } from "@/hooks/use-provider-credits"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { CreditsNonRefundableNotice } from "@/components/credits/credits-non-refundable-notice"
 import { MapPin, X, Search, Loader2 } from "lucide-react"
-import type { PlaceResult, PromotionLocation, CoverageType } from "@/types"
+import Link from "next/link"
+import type {
+  PlaceResult,
+  PromotionLocation,
+  CoverageType,
+  AdCreditLocationPricing,
+} from "@/types"
+import { ROUTES } from "@/lib/constants"
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -41,6 +58,7 @@ let googleMapsInitialized = false
 
 export function LocationPicker({ promotionId, promotionType }: LocationPickerProps) {
   const { toast } = useToast()
+  const { balance: creditBalance, setBalance } = useProviderCredits()
 
   // State
   const [locations, setLocations] = useState<PromotionLocation[]>([])
@@ -51,10 +69,13 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
   const [showDropdown, setShowDropdown] = useState(false)
   const [loadingLocations, setLoadingLocations] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [locationPendingRemoval, setLocationPendingRemoval] =
+    useState<PromotionLocation | null>(null)
 
   // Selection confirmation state
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
   const [coverageType, setCoverageType] = useState<CoverageType>("point")
+  const [pricing, setPricing] = useState<AdCreditLocationPricing | null>(null)
 
   // Refs
   const mapRef = useRef<HTMLDivElement>(null)
@@ -67,6 +88,38 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     promotionType === "service"
       ? "¿Dónde está ubicado tu local o lugar de servicio?"
       : "¿En qué zonas quieres mostrar esta promoción?"
+
+  const locationCost =
+    pricing != null
+      ? Number(
+          coverageType === "city"
+            ? pricing.city_credits
+            : pricing.point_credits,
+        )
+      : null
+
+  const canAfford =
+    locationCost == null ||
+    creditBalance == null ||
+    creditBalance >= locationCost
+
+  // ─── Precios por ubicación (saldo vía ProviderCredits) ──
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadPricing() {
+      try {
+        const priceRes = await api.credits.locationPricing()
+        if (!cancelled) setPricing(priceRes)
+      } catch {
+        if (!cancelled) setPricing(null)
+      }
+    }
+    loadPricing()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // ─── Map initialization ─────────────────────────────
 
@@ -236,21 +289,40 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
       setLocations((prev) => [...prev, newLocation])
       addPin(newLocation)
       setSelectedPlace(null)
+      if (newLocation.balance_after != null) {
+        setBalance(Number(newLocation.balance_after))
+      }
 
       const map = mapInstanceRef.current
       if (map) {
         map.setCenter({ lat: newLocation.place.lat, lng: newLocation.place.lng })
         map.setZoom(DEFAULT_ZOOM)
       }
+
+      const charged = newLocation.credits_charged
+      toast({
+        title: "Ubicación agregada",
+        description:
+          charged != null
+            ? `Se descontaron ${Number(charged)} créditos.`
+            : "La ubicación quedó vinculada a tu publicación.",
+      })
     } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.status === 409
-            ? "Esta ubicación ya está vinculada"
-            : err.status === 400
+      let message = "No se pudo agregar la ubicación"
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          message = "Esta ubicación ya está vinculada"
+        } else if (err.status === 402 || err.message.toLowerCase().includes("saldo")) {
+          message = err.message
+        } else if (err.status === 400) {
+          message =
+            err.message.includes("5") || err.message.toLowerCase().includes("máximo")
               ? "Máximo 5 ubicaciones permitidas"
               : err.message
-          : "No se pudo agregar la ubicación"
+        } else {
+          message = err.message
+        }
+      }
       toast({ variant: "destructive", title: "Error", description: message })
     } finally {
       setIsAdding(false)
@@ -259,7 +331,13 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
 
   // ─── Remove location ───────────────────────────────
 
-  async function handleRemove(locationId: string) {
+  function requestRemoveLocation(loc: PromotionLocation) {
+    setLocationPendingRemoval(loc)
+  }
+
+  async function confirmRemoveLocation() {
+    if (!locationPendingRemoval) return
+    const locationId = locationPendingRemoval.id
     setDeletingId(locationId)
     try {
       await api.locations.remove(promotionId, locationId)
@@ -269,6 +347,7 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
         fitBounds(updated)
         return updated
       })
+      setLocationPendingRemoval(null)
     } catch (err) {
       toast({
         variant: "destructive",
@@ -305,6 +384,24 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
           {locations.length}/{MAX_LOCATIONS} ubicaciones
         </p>
       </div>
+
+      {pricing != null && (
+        <p className="text-sm text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          Créditos por ubicación:{" "}
+          <strong>{Number(pricing.point_credits)}</strong> (punto) ·{" "}
+          <strong>{Number(pricing.city_credits)}</strong> (ciudad).{" "}
+          {creditBalance != null && (
+            <>
+              Saldo: <strong>{creditBalance}</strong>.{" "}
+              <Link href={ROUTES.CREDITS} className="text-[#4a6b1e] underline font-medium">
+                Comprar créditos
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
+      <CreditsNonRefundableNotice variant="location-spend" />
 
       {/* Search input */}
       {!selectedPlace && (
@@ -372,7 +469,12 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
               }`}
             >
               <p className="text-sm font-medium">Punto exacto (1km)</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Radio de 1km alrededor</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Radio de 1km
+                {pricing != null && (
+                  <> · {Number(pricing.point_credits)} créditos</>
+                )}
+              </p>
             </button>
             <button
               type="button"
@@ -384,9 +486,24 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
               }`}
             >
               <p className="text-sm font-medium">Toda la ciudad</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Cubre toda la ciudad</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ciudad completa
+                {pricing != null && (
+                  <> · {Number(pricing.city_credits)} créditos</>
+                )}
+              </p>
             </button>
           </div>
+
+          {locationCost != null && creditBalance != null && !canAfford && (
+            <p className="text-xs text-red-600">
+              Saldo insuficiente: necesitas {locationCost} créditos y tienes {creditBalance}.
+            </p>
+          )}
+
+          {locationCost != null && canAfford && (
+            <CreditsNonRefundableNotice variant="location-spend" className="text-[11px]" />
+          )}
 
           <div className="flex gap-2 pt-1">
             <Button
@@ -402,11 +519,13 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
               type="button"
               size="sm"
               onClick={handleConfirmAdd}
-              disabled={isAdding}
+              disabled={isAdding || !canAfford}
               className="bg-[#4a6b1e] hover:bg-[#3d5a18] text-white"
             >
               {isAdding && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-              Agregar ubicación
+              {locationCost != null
+                ? `Agregar (${locationCost} créditos)`
+                : "Agregar ubicación"}
             </Button>
           </div>
         </div>
@@ -458,7 +577,7 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemove(loc.id)}
+                  onClick={() => requestRemoveLocation(loc)}
                   disabled={deletingId === loc.id}
                   className="shrink-0 rounded-full p-1 hover:bg-destructive/10 transition-colors disabled:opacity-50"
                   aria-label="Eliminar ubicación"
@@ -474,6 +593,61 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
           })}
         </div>
       ) : null}
+
+      <Dialog
+        open={locationPendingRemoval != null}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) setLocationPendingRemoval(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¿Eliminar esta ubicación?</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-1 text-left">
+                {locationPendingRemoval && (
+                  <p className="text-sm text-foreground font-medium truncate">
+                    {locationPendingRemoval.place.address || "Sin dirección"}
+                  </p>
+                )}
+                <CreditsNonRefundableNotice
+                  variant="location-remove"
+                  creditsCharged={
+                    locationPendingRemoval?.credits_charged != null
+                      ? Number(locationPendingRemoval.credits_charged)
+                      : null
+                  }
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLocationPendingRemoval(null)}
+              disabled={Boolean(deletingId)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmRemoveLocation()}
+              disabled={Boolean(deletingId)}
+            >
+              {deletingId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando…
+                </>
+              ) : (
+                "Eliminar sin reembolso"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

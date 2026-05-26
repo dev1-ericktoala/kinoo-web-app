@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/chart-card"
 import { HorizontalBarList } from "@/components/admin/horizontal-bar-list"
 import { useAdminUser } from "@/providers/admin-provider"
+import { KYNOO_POINTS_BRAND } from "@/lib/constants"
 import type {
   DashboardSummary,
   UsersAnalytics,
@@ -137,7 +138,7 @@ export default function AdminDashboardPage() {
               error={summary.error ?? undefined}
             />
             <StatCard
-              label="Puntos en circulación"
+              label={`${KYNOO_POINTS_BRAND} en circulación`}
               value={
                 s
                   ? (

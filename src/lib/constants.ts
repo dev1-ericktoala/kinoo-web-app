@@ -9,11 +9,13 @@ export const ROUTES = {
   NEW_PROMOTION: "/dashboard/promotions/new",
   EDIT_PROMOTION: (id: string) => `/dashboard/promotions/${id}`,
   PROFILE: "/dashboard/profile",
+  CREDITS: "/dashboard/credits",
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_REVIEW: "/admin/review",
   ADMIN_AUDIT_LOGS: "/admin/audit-logs",
   ADMIN_EVENTS: "/admin/events",
   ADMIN_EMERGENCY_CREDITS: "/admin/emergency-credits",
+  ADMIN_AD_CREDITS: "/admin/ad-credits",
   ADMIN_KNOWLEDGE: "/admin/knowledge",
   ADMIN_KNOWLEDGE_DETAIL: (id: string) => `/admin/knowledge/${id}`,
 } as const
@@ -40,13 +42,23 @@ export const KNOWLEDGE_CATEGORY_COLORS: Record<string, string> = {
   otro: "bg-gray-100 text-gray-800",
 }
 
-export const ADMIN_ROLES = ["admin", "owner"] as const
+/** Roles con acceso al panel /admin (backoffice). */
+export const ADMIN_ROLES = ["admin"] as const
+
+/** Roles con acceso al panel web kinoo-web-app (proveedor + backoffice). */
+export const PANEL_WEB_ROLES = ["provider", "admin"] as const
+
+/**
+ * Puntos KYNOO — copy de producto (solo UI).
+ * Backend: `users.referral_points`, API `total_points` (moneda de recompensas completa).
+ */
+export const KYNOO_POINTS_BRAND = "Puntos KYNOO"
 
 export const BENEFIT_TYPE_LABELS: Record<string, string> = {
   discount: "Descuento",
   free_product: "Producto gratis",
   service: "Servicio",
-  points_only: "Solo puntos",
+  points_only: "Solo Puntos KYNOO",
 }
 
 export const PROMOTION_STATUS_LABELS: Record<string, string> = {
@@ -60,3 +72,22 @@ export const PROMOTION_TYPE_LABELS: Record<string, string> = {
   promotion: "Promoción",
   service: "Servicio",
 }
+
+export const CREDIT_ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente de pago",
+  processing: "Procesando pago",
+  paid: "Pagada",
+  failed: "Fallida",
+  expired: "Expirada",
+  refunded: "Reembolsada",
+}
+
+export const CREDIT_LEDGER_TYPE_LABELS: Record<string, string> = {
+  purchase: "Compra",
+  spend: "Uso",
+  refund: "Reembolso",
+  adjustment: "Ajuste",
+}
+
+export const PENDING_CREDIT_ORDER_KEY = "kinoo_pending_credit_order_id"
+export const PENDING_CREDIT_CHECKOUT_URL_KEY = "kinoo_pending_credit_checkout_url"

@@ -10,7 +10,7 @@ import {
 import { useRouter } from "next/navigation"
 import { api, ApiError } from "@/lib/api-client"
 import { getAccessToken, setTokens, clearTokens } from "@/lib/auth"
-import { ROUTES, ADMIN_ROLES } from "@/lib/constants"
+import { ROUTES, ADMIN_ROLES, PANEL_WEB_ROLES } from "@/lib/constants"
 import type { UserResponse } from "@/types"
 
 interface AuthContextType {
@@ -23,8 +23,6 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null)
 
-const ALLOWED_ROLES = ["provider", "owner", "admin"]
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -35,7 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await api.users.me()
       if (
         userData.role_code &&
-        ALLOWED_ROLES.includes(userData.role_code)
+        PANEL_WEB_ROLES.includes(
+          userData.role_code as (typeof PANEL_WEB_ROLES)[number],
+        )
       ) {
         setUser(userData)
       } else {
@@ -69,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await api.users.me()
       if (
         userData.role_code &&
-        ALLOWED_ROLES.includes(userData.role_code)
+        PANEL_WEB_ROLES.includes(
+          userData.role_code as (typeof PANEL_WEB_ROLES)[number],
+        )
       ) {
         setUser(userData)
         const isAdmin = ADMIN_ROLES.includes(userData.role_code as typeof ADMIN_ROLES[number])

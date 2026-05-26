@@ -12,6 +12,24 @@ export class ApiError extends Error {
   }
 }
 
+function formatApiErrorDetail(detail: unknown): string {
+  if (typeof detail === "string") return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (item && typeof item === "object" && "msg" in item) {
+          const loc = Array.isArray((item as { loc?: unknown }).loc)
+            ? (item as { loc: unknown[] }).loc.join(".")
+            : ""
+          return loc ? `${loc}: ${(item as { msg: string }).msg}` : (item as { msg: string }).msg
+        }
+        return String(item)
+      })
+      .join("; ")
+  }
+  return "Error en la solicitud"
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return null
@@ -72,7 +90,7 @@ export async function apiClient<T>(
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, errorBody.detail || "Error en la solicitud")
+    throw new ApiError(res.status, formatApiErrorDetail(errorBody.detail))
   }
 
   if (res.status === 204) return undefined as T
@@ -168,6 +186,43 @@ export const api = {
     breeds: (species: string) =>
       apiClient<import("@/types").Breed[]>(
         `/pets/breeds?species=${encodeURIComponent(species)}`,
+      ),
+  },
+
+  credits: {
+    locationPricing: () =>
+      apiClient<import("@/types").AdCreditLocationPricing>(
+        "/provider/credits/location-pricing",
+      ),
+    packs: () =>
+      apiClient<import("@/types").CreditPackListResponse>(
+        "/provider/credits/packs",
+      ),
+    balance: () =>
+      apiClient<import("@/types").ProviderCreditBalance>(
+        "/provider/credits/balance",
+      ),
+    transactions: (limit = 20, offset = 0) =>
+      apiClient<import("@/types").ProviderCreditTransactionList>(
+        `/provider/credits/transactions?limit=${limit}&offset=${offset}`,
+      ),
+    createOrder: (packId: string, idempotencyKey?: string) => {
+      const headers: Record<string, string> = {}
+      if (idempotencyKey) {
+        headers["Idempotency-Key"] = idempotencyKey
+      }
+      return apiClient<import("@/types").ProviderCreditOrderCreateResponse>(
+        "/provider/credits/orders",
+        {
+          method: "POST",
+          body: JSON.stringify({ pack_id: packId }),
+          headers,
+        },
+      )
+    },
+    getOrder: (orderId: string) =>
+      apiClient<import("@/types").ProviderCreditOrder>(
+        `/provider/credits/orders/${orderId}`,
       ),
   },
 }

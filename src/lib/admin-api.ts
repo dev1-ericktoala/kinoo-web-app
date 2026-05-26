@@ -19,6 +19,8 @@ import type {
   KnowledgeDocumentUpdate,
   Promotion,
   PromotionReviewAction,
+  AdminProviderCreditOrderList,
+  ProviderCreditOrderRefundResponse,
 } from "@/types"
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -145,6 +147,24 @@ export const adminApi = {
     reprocess: (id: string) =>
       apiClient<KnowledgeDocumentResponse>(
         `/admin/knowledge/documents/${id}/reprocess`,
+        { method: "POST" },
+      ),
+  },
+
+  adCredits: {
+    listOrders: (params: {
+      limit?: number
+      offset?: number
+      status?: string
+      search?: string
+    }) =>
+      apiClient<AdminProviderCreditOrderList>(
+        `/admin/credits/orders${buildQuery(params)}`,
+      ),
+
+    refundOrder: (orderId: string) =>
+      apiClient<ProviderCreditOrderRefundResponse>(
+        `/admin/credits/orders/${orderId}/refund`,
         { method: "POST" },
       ),
   },

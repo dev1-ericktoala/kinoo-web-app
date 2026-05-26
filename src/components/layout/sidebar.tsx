@@ -10,6 +10,7 @@ import {
   Megaphone,
   PlusCircle,
   User,
+  Wallet,
   LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,11 @@ const navItems = [
     label: "Publicar",
     href: ROUTES.NEW_PROMOTION,
     icon: PlusCircle,
+  },
+  {
+    label: "Créditos",
+    href: ROUTES.CREDITS,
+    icon: Wallet,
   },
   {
     label: "Perfil",

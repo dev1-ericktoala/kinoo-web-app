@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Loader2 } from "lucide-react"
+import { KYNOO_POINTS_BRAND } from "@/lib/constants"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -216,7 +217,8 @@ export default function ProfilePage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Puntos de referidos</p>
+              {/* UI: Puntos KYNOO — saldo en BD como `referral_points` */}
+              <p className="text-xs text-muted-foreground">{KYNOO_POINTS_BRAND}</p>
               <p className="text-lg font-semibold">{user.referral_points}</p>
             </div>
             <div>

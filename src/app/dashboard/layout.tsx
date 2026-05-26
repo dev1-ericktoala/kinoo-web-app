@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AuthProvider } from "@/providers/auth-provider"
+import { ProviderCreditsProvider } from "@/providers/provider-credits-provider"
 import { useAuth } from "@/hooks/use-auth"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Topbar } from "@/components/layout/topbar"
@@ -38,13 +39,15 @@ function DashboardGuard({ children }: { children: React.ReactNode }) {
   if (!user) return null
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1 md:ml-[240px] flex flex-col">
-        <Topbar />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+    <ProviderCreditsProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex-1 md:ml-[240px] flex flex-col">
+          <Topbar />
+          <main className="flex-1 p-4 md:p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </ProviderCreditsProvider>
   )
 }
 

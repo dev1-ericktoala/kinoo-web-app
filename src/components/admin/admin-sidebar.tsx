@@ -10,6 +10,7 @@ import {
   Activity,
   Phone,
   BookOpen,
+  Wallet,
   LogOut,
   Menu,
   X,
@@ -56,6 +57,11 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
       icon: Phone,
       label: "Créditos Activos",
       href: ROUTES.ADMIN_EMERGENCY_CREDITS,
+    },
+    {
+      icon: Wallet,
+      label: "Créditos publicitarios",
+      href: ROUTES.ADMIN_AD_CREDITS,
     },
     {
       icon: BookOpen,

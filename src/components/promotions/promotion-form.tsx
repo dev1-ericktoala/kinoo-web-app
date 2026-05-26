@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { api, ApiError } from "@/lib/api-client"
-import { ROUTES } from "@/lib/constants"
+import { KYNOO_POINTS_BRAND, ROUTES } from "@/lib/constants"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -361,7 +361,7 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
                 <SelectItem value="discount">Descuento</SelectItem>
                 <SelectItem value="free_product">Producto gratis</SelectItem>
                 <SelectItem value="service">Servicio</SelectItem>
-                <SelectItem value="points_only">Solo puntos</SelectItem>
+                <SelectItem value="points_only">Solo Puntos KYNOO</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -451,8 +451,9 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
 
           {watchIsReferralOnly && (
             <div className="space-y-2">
+              {/* Saldo mínimo del wallet (`min_referral_points_required` en API) */}
               <Label className="text-xs font-medium">
-                Puntos mínimos de referidos
+                {KYNOO_POINTS_BRAND} mínimos requeridos
               </Label>
               <Input
                 type="number"

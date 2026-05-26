@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { useProviderCredits } from "@/hooks/use-provider-credits"
+import { formatCreditBalance } from "@/lib/format-credit-balance"
 import { ROUTES } from "@/lib/constants"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -24,12 +26,14 @@ import {
   LayoutDashboard,
   Megaphone,
   PlusCircle,
+  Wallet,
 } from "lucide-react"
 
 const mobileNavItems = [
   { label: "Inicio", href: ROUTES.DASHBOARD, icon: LayoutDashboard, exact: true },
   { label: "Mis Promociones", href: ROUTES.PROMOTIONS, icon: Megaphone },
   { label: "Publicar", href: ROUTES.NEW_PROMOTION, icon: PlusCircle },
+  { label: "Créditos", href: ROUTES.CREDITS, icon: Wallet },
   { label: "Perfil", href: ROUTES.PROFILE, icon: User },
 ]
 
@@ -37,14 +41,18 @@ function getPageTitle(pathname: string): string {
   if (pathname === ROUTES.DASHBOARD) return "Inicio"
   if (pathname === ROUTES.NEW_PROMOTION) return "Nueva Publicación"
   if (pathname.startsWith(ROUTES.PROMOTIONS)) return "Promociones"
+  if (pathname === ROUTES.CREDITS) return "Créditos"
   if (pathname === ROUTES.PROFILE) return "Perfil"
   return "KINOO"
 }
 
 export function Topbar() {
   const { user, logout } = useAuth()
+  const { balance, isBalanceLoading } = useProviderCredits()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const isProvider = user?.role_code === "provider"
 
   const initials = user?.full_name
     ? user.full_name
@@ -106,24 +114,63 @@ export function Topbar() {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {isProvider && (
+        <Link
+          href={ROUTES.CREDITS}
+          className={cn(
+            "flex items-center gap-1.5 rounded-md border border-[#4a6b1e]/25 mr-2",
+            "bg-[#4a6b1e]/10 px-2.5 py-1 text-xs font-semibold text-[#4a6b1e]",
+            "hover:bg-[#4a6b1e]/15 transition-colors shrink-0",
+          )}
+          title="Créditos publicitarios"
+        >
+          <Wallet className="h-3.5 w-3.5" />
+          {isBalanceLoading ? (
+            <span className="tabular-nums">…</span>
+          ) : balance !== null ? (
+            <span className="tabular-nums">{formatCreditBalance(balance)}</span>
+          ) : (
+            <span>—</span>
+          )}
+        </Link>
+      )}
+
       {/* User menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="gap-2 px-2 hover:bg-muted"
+            className="gap-2 px-2 hover:bg-muted max-w-[min(100%,16rem)]"
           >
-            <Avatar className="h-7 w-7">
+            <Avatar className="h-7 w-7 shrink-0">
               <AvatarFallback className="text-xs bg-muted text-foreground font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <span className="hidden sm:inline text-sm font-medium text-foreground">
+            <span className="hidden sm:inline text-sm font-medium text-foreground truncate">
               {user?.full_name || "Proveedor"}
             </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-52">
+          {isProvider && (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href={ROUTES.CREDITS} className="cursor-pointer">
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Créditos
+                  <span className="ml-auto tabular-nums font-semibold text-[#4a6b1e]">
+                    {isBalanceLoading
+                      ? "…"
+                      : balance !== null
+                        ? formatCreditBalance(balance)
+                        : "—"}
+                  </span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem asChild>
             <Link href={ROUTES.PROFILE} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />

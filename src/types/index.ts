@@ -184,6 +184,15 @@ export interface PromotionLocation {
   coverage_type: CoverageType
   place: PlaceResult
   created_at: string
+  credits_charged?: number | string | null
+  balance_after?: number | string | null
+}
+
+export interface AdCreditLocationPricing {
+  point_credits: number | string
+  city_credits: number | string
+  currency_equivalent: string
+  credits_per_usd: number | string
 }
 
 // ─── Admin Dashboard ────────────────────────────────────
@@ -473,4 +482,98 @@ export type UserPetMeaning = (typeof USER_PET_MEANING_VALUES)[number]
 export interface UserFilters {
   pet_meanings?: string[]
   genders?: string[]
+}
+
+// ─── Provider ad credits ─────────────────────────────────
+
+export type ProviderCreditOrderStatus =
+  | "pending"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "refunded"
+
+export type ProviderCreditLedgerType =
+  | "purchase"
+  | "spend"
+  | "refund"
+  | "adjustment"
+
+export interface CreditPack {
+  id: string
+  label: string
+  amount_usd: number | string
+  credits: number | string
+  description: string
+}
+
+export interface CreditPackListResponse {
+  packs: CreditPack[]
+  currency: string
+  credits_per_usd: number | string
+}
+
+export interface ProviderCreditBalance {
+  provider_id: string
+  balance_credits: number | string
+  currency_equivalent: string
+  updated_at: string | null
+}
+
+export interface ProviderCreditLedgerEntry {
+  id: string
+  provider_id: string
+  order_id: string | null
+  type: ProviderCreditLedgerType
+  amount_credits: number | string
+  balance_after: number | string
+  description: string | null
+  created_at: string
+}
+
+export interface ProviderCreditTransactionList {
+  items: ProviderCreditLedgerEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ProviderCreditOrder {
+  id: string
+  provider_id: string
+  pack_id: string
+  amount_usd: number | string
+  credits_to_grant: number | string
+  status: ProviderCreditOrderStatus
+  nuvei_reference: string | null
+  nuvei_transaction_id: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+  checkout_url?: string | null
+}
+
+export interface ProviderCreditOrderCreateResponse {
+  order: ProviderCreditOrder
+  checkout_url: string | null
+  message: string
+}
+
+export interface AdminProviderCreditOrder extends ProviderCreditOrder {
+  provider_name: string
+  provider_email: string
+}
+
+export interface AdminProviderCreditOrderList {
+  items: AdminProviderCreditOrder[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ProviderCreditOrderRefundResponse {
+  order: ProviderCreditOrder
+  ledger_entry: ProviderCreditLedgerEntry
+  message: string
 }
