@@ -6,16 +6,33 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public title?: string,
   ) {
     super(message)
     this.name = "ApiError"
   }
 }
 
-function formatApiErrorDetail(detail: unknown): string {
-  if (typeof detail === "string") return detail
+function parseApiErrorDetail(detail: unknown): { message: string; title?: string } {
+  if (typeof detail === "string" && detail.trim()) {
+    return { message: detail.trim() }
+  }
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    const payload = detail as { message?: string; title?: string }
+    const message =
+      typeof payload.message === "string" && payload.message.trim()
+        ? payload.message.trim()
+        : null
+    if (message) {
+      const title =
+        typeof payload.title === "string" && payload.title.trim()
+          ? payload.title.trim()
+          : undefined
+      return { message, title }
+    }
+  }
   if (Array.isArray(detail)) {
-    return detail
+    const message = detail
       .map((item) => {
         if (item && typeof item === "object" && "msg" in item) {
           const loc = Array.isArray((item as { loc?: unknown }).loc)
@@ -26,8 +43,9 @@ function formatApiErrorDetail(detail: unknown): string {
         return String(item)
       })
       .join("; ")
+    return { message }
   }
-  return "Error en la solicitud"
+  return { message: "Error en la solicitud" }
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -58,8 +76,12 @@ export async function apiClient<T>(
   const token = getAccessToken()
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
+  }
+
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json"
   }
 
   if (token) {
@@ -90,7 +112,8 @@ export async function apiClient<T>(
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, formatApiErrorDetail(errorBody.detail))
+    const parsed = parseApiErrorDetail(errorBody.detail)
+    throw new ApiError(res.status, parsed.message, parsed.title)
   }
 
   if (res.status === 204) return undefined as T
@@ -224,5 +247,91 @@ export const api = {
       apiClient<import("@/types").ProviderCreditOrder>(
         `/provider/credits/orders/${orderId}`,
       ),
+  },
+
+  reservations: {
+    list: (
+      limit = 25,
+      offset = 0,
+      status?: string,
+      search?: string,
+      fulfillmentPhase?: string,
+      dateFrom?: string,
+      dateTo?: string,
+    ) => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      })
+      if (status) params.set("order_status", status)
+      if (search?.trim()) params.set("search", search.trim())
+      if (fulfillmentPhase) params.set("fulfillment_phase", fulfillmentPhase)
+      if (dateFrom) params.set("date_from", dateFrom)
+      if (dateTo) params.set("date_to", dateTo)
+      return apiClient<import("@/types").PromotionPaidOrderListResponse>(
+        `/provider/promotion-orders?${params.toString()}`,
+      )
+    },
+
+    exportCsv: async (params: {
+      order_status?: string
+      fulfillment_phase?: string
+      search?: string
+      date_from?: string
+      date_to?: string
+    }) => {
+      const qs = new URLSearchParams()
+      Object.entries(params).forEach(([k, v]) => {
+        if (v != null && v !== "") qs.set(k, String(v))
+      })
+      const token = getAccessToken()
+      const query = qs.toString()
+      const res = await fetch(
+        `${API_BASE_URL}/provider/promotion-orders/export.csv${query ? `?${query}` : ""}`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(
+          typeof err.detail === "string"
+            ? err.detail
+            : "Error al exportar CSV",
+        )
+      }
+      return res.blob()
+    },
+    get: (orderId: string) =>
+      apiClient<import("@/types").PromotionPaidOrder>(
+        `/provider/promotion-orders/${orderId}`,
+      ),
+    confirmContact: (orderId: string, schedulingNotes?: string) =>
+      apiClient<import("@/types").PromotionOrderFulfillment>(
+        `/provider/promotion-orders/${orderId}/fulfillment/contact`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            scheduling_notes: schedulingNotes?.trim() || null,
+          }),
+        },
+      ),
+    submitDelivery: async (
+      orderId: string,
+      photo: File,
+      deliveryDescription: string,
+    ) => {
+      const form = new FormData()
+      form.append("photo", photo)
+      form.append("delivery_description", deliveryDescription.trim())
+      return apiClient<import("@/types").PromotionOrderFulfillment>(
+        `/provider/promotion-orders/${orderId}/fulfillment/delivery`,
+        {
+          method: "POST",
+          body: form,
+        },
+      )
+    },
   },
 }

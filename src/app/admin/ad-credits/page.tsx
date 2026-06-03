@@ -6,6 +6,7 @@ import { es } from "date-fns/locale"
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   Loader2,
   RotateCcw,
   Search,
@@ -13,11 +14,18 @@ import {
 } from "lucide-react"
 import { adminApi } from "@/lib/admin-api"
 import { ApiError } from "@/lib/api-client"
-import { CREDIT_ORDER_STATUS_LABELS } from "@/lib/constants"
+import {
+  ADMIN_FILTER_INPUT_CLASS,
+  ADMIN_FILTER_LABEL_CLASS,
+  ADMIN_FILTER_PANEL_CLASS,
+  ADMIN_FILTER_SELECT_CLASS,
+  CREDIT_ORDER_STATUS_LABELS,
+} from "@/lib/constants"
 import type {
   AdminProviderCreditOrder,
   AdminProviderCreditOrderList,
 } from "@/types"
+import { AdminCsvExportDialog } from "@/components/admin/admin-csv-export-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -67,6 +75,7 @@ export default function AdminAdCreditsPage() {
   const [statusFilter, setStatusFilter] = useState("")
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [exportOpen, setExportOpen] = useState(false)
 
   const [refundTarget, setRefundTarget] =
     useState<AdminProviderCreditOrder | null>(null)
@@ -134,15 +143,26 @@ export default function AdminAdCreditsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-[#111827]">
-          Créditos publicitarios
-        </h1>
-        {result && (
-          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
-            {result.total} orden{result.total !== 1 && "es"}
-          </span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-semibold text-[#111827]">
+            Créditos publicitarios
+          </h1>
+          {result && (
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+              {result.total} orden{result.total !== 1 && "es"}
+            </span>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setExportOpen(true)}
+          className="shrink-0"
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Exportar CSV
+        </Button>
       </div>
 
       <p className="text-sm text-gray-500 max-w-2xl">
@@ -164,39 +184,56 @@ export default function AdminAdCreditsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-1 min-w-[200px] max-w-md items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Proveedor, email, pack o ID Nuvei…"
-            className="flex-1 text-sm outline-none"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
+      <div className={ADMIN_FILTER_PANEL_CLASS}>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[200px] flex-1 max-w-md space-y-1">
+            <label className={ADMIN_FILTER_LABEL_CLASS}>Buscar</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Proveedor, email, pack o ID Nuvei…"
+                className={`${ADMIN_FILTER_INPUT_CLASS} pl-9`}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className={ADMIN_FILTER_LABEL_CLASS}>Estado</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
+              className={ADMIN_FILTER_SELECT_CLASS}
+            >
+              {STATUS_FILTER_OPTIONS.map((o) => (
+                <option key={o.value || "all"} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="flex h-9 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+          >
+            <Search className="h-3.5 w-3.5" />
+            Buscar
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Limpiar
+          </button>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value)
-            setPage(1)
-          }}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-        >
-          {STATUS_FILTER_OPTIONS.map((o) => (
-            <option key={o.value || "all"} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <Button variant="outline" size="sm" onClick={handleSearch}>
-          Buscar
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-1" />
-          Limpiar
-        </Button>
       </div>
 
       {error && (
@@ -367,6 +404,25 @@ export default function AdminAdCreditsPage() {
           )}
         </>
       )}
+
+      <AdminCsvExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        title="Exportar transacciones"
+        description="Selecciona los filtros y descarga un archivo CSV con las órdenes de compra de créditos publicitarios."
+        statusOptions={STATUS_FILTER_OPTIONS}
+        dateFromLabel="Fecha desde"
+        dateToLabel="Fecha hasta"
+        downloadFilenamePrefix="transacciones_admin"
+        onDownload={(filters) =>
+          adminApi.adCredits.exportOrdersCsv({
+            status: filters.status || undefined,
+            provider_id: filters.providerId || undefined,
+            date_from: filters.dateFrom || undefined,
+            date_to: filters.dateTo || undefined,
+          })
+        }
+      />
 
       <Dialog
         open={!!refundTarget}

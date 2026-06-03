@@ -11,6 +11,7 @@ import {
   Phone,
   BookOpen,
   Wallet,
+  PackageCheck,
   LogOut,
   Menu,
   X,
@@ -34,12 +35,17 @@ interface AdminSidebarProps {
 export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
   const pathname = usePathname()
   const [pendingCount, setPendingCount] = useState(0)
+  const [pendingFulfillments, setPendingFulfillments] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     adminApi.promotionReview
       .listPending()
       .then((list) => setPendingCount(list.length))
+      .catch(() => {})
+    adminApi.promotionFulfillments
+      .list({ status: "submitted", limit: 1, offset: 0 })
+      .then((res) => setPendingFulfillments(res.total))
       .catch(() => {})
   }, [])
 
@@ -62,6 +68,12 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
       icon: Wallet,
       label: "Créditos publicitarios",
       href: ROUTES.ADMIN_AD_CREDITS,
+    },
+    {
+      icon: PackageCheck,
+      label: "Entregas de servicio",
+      href: ROUTES.ADMIN_PROMOTION_FULFILLMENTS,
+      badge: pendingFulfillments,
     },
     {
       icon: BookOpen,

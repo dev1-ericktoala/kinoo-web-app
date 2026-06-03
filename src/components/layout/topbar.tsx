@@ -27,11 +27,13 @@ import {
   Megaphone,
   PlusCircle,
   Wallet,
+  CalendarCheck,
 } from "lucide-react"
 
 const mobileNavItems = [
   { label: "Inicio", href: ROUTES.DASHBOARD, icon: LayoutDashboard, exact: true },
   { label: "Mis Promociones", href: ROUTES.PROMOTIONS, icon: Megaphone },
+  { label: "Reservas", href: ROUTES.RESERVATIONS, icon: CalendarCheck },
   { label: "Publicar", href: ROUTES.NEW_PROMOTION, icon: PlusCircle },
   { label: "Créditos", href: ROUTES.CREDITS, icon: Wallet },
   { label: "Perfil", href: ROUTES.PROFILE, icon: User },
@@ -41,6 +43,7 @@ function getPageTitle(pathname: string): string {
   if (pathname === ROUTES.DASHBOARD) return "Inicio"
   if (pathname === ROUTES.NEW_PROMOTION) return "Nueva Publicación"
   if (pathname.startsWith(ROUTES.PROMOTIONS)) return "Promociones"
+  if (pathname.startsWith(ROUTES.RESERVATIONS)) return "Reservas"
   if (pathname === ROUTES.CREDITS) return "Créditos"
   if (pathname === ROUTES.PROFILE) return "Perfil"
   return "KINOO"

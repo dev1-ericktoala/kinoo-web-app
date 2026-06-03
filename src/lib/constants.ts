@@ -10,15 +10,27 @@ export const ROUTES = {
   EDIT_PROMOTION: (id: string) => `/dashboard/promotions/${id}`,
   PROFILE: "/dashboard/profile",
   CREDITS: "/dashboard/credits",
+  RESERVATIONS: "/dashboard/reservations",
+  RESERVATION_DETAIL: (id: string) => `/dashboard/reservations/${id}`,
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_REVIEW: "/admin/review",
   ADMIN_AUDIT_LOGS: "/admin/audit-logs",
   ADMIN_EVENTS: "/admin/events",
   ADMIN_EMERGENCY_CREDITS: "/admin/emergency-credits",
   ADMIN_AD_CREDITS: "/admin/ad-credits",
+  ADMIN_PROMOTION_FULFILLMENTS: "/admin/promotion-fulfillments",
   ADMIN_KNOWLEDGE: "/admin/knowledge",
   ADMIN_KNOWLEDGE_DETAIL: (id: string) => `/admin/knowledge/${id}`,
 } as const
+
+/** Clases compartidas para filtros del panel admin (alineadas con Auditoría). */
+export const ADMIN_FILTER_LABEL_CLASS = "text-xs font-medium text-gray-500"
+export const ADMIN_FILTER_INPUT_CLASS =
+  "h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+export const ADMIN_FILTER_SELECT_CLASS =
+  "h-9 min-w-[220px] rounded-lg border border-gray-300 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+export const ADMIN_FILTER_PANEL_CLASS =
+  "rounded-lg border border-[#e5e7eb] bg-white p-4"
 
 export const KNOWLEDGE_CATEGORIES = [
   "nutrición",
@@ -80,6 +92,27 @@ export const CREDIT_ORDER_STATUS_LABELS: Record<string, string> = {
   failed: "Fallida",
   expired: "Expirada",
   refunded: "Reembolsada",
+}
+
+export const PROMOTION_PAID_ORDER_STATUS_LABELS: Record<string, string> = {
+  ...CREDIT_ORDER_STATUS_LABELS,
+  cancelled: "Cancelada",
+}
+
+export const FULFILLMENT_PHASE_LABELS: Record<string, string> = {
+  pending_contact: "Pendiente de contactar",
+  scheduled: "Agendado",
+  submitted: "En revisión",
+  verified: "Verificado",
+  rejected: "Rechazado",
+  not_applicable: "—",
+}
+
+export const FULFILLMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: "Agendado",
+  submitted: "En revisión",
+  verified: "Verificado",
+  rejected: "Rechazado",
 }
 
 export const CREDIT_LEDGER_TYPE_LABELS: Record<string, string> = {

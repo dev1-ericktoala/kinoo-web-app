@@ -12,6 +12,7 @@ import {
   User,
   Wallet,
   LogOut,
+  CalendarCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -27,6 +28,11 @@ const navItems = [
     label: "Mis Promociones",
     href: ROUTES.PROMOTIONS,
     icon: Megaphone,
+  },
+  {
+    label: "Reservas",
+    href: ROUTES.RESERVATIONS,
+    icon: CalendarCheck,
   },
   {
     label: "Publicar",

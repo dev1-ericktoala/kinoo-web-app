@@ -577,3 +577,122 @@ export interface ProviderCreditOrderRefundResponse {
   ledger_entry: ProviderCreditLedgerEntry
   message: string
 }
+
+// ─── Promotion paid orders (reservas) ────────────────────
+
+export type PromotionPaidOrderStatus =
+  | "pending"
+  | "processing"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "cancelled"
+  | "refunded"
+
+export type PromotionOrderFulfillmentStatus =
+  | "scheduled"
+  | "submitted"
+  | "verified"
+  | "rejected"
+
+export type PromotionOrderFulfillmentPhase =
+  | "not_applicable"
+  | "pending_contact"
+  | "scheduled"
+  | "submitted"
+  | "verified"
+  | "rejected"
+
+export interface PromotionOrderFulfillment {
+  id: string
+  order_id: string
+  provider_id: string
+  status: PromotionOrderFulfillmentStatus
+  contact_confirmed_at: string | null
+  scheduling_notes: string | null
+  photo_url: string | null
+  delivery_description: string | null
+  submitted_at: string | null
+  reviewed_at: string | null
+  admin_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PromotionPaidOrder {
+  id: string
+  promotion_id: string
+  provider_id: string
+  buyer_user_id: string
+  amount_usd: number | string
+  currency: string
+  status: PromotionPaidOrderStatus
+  nuvei_reference: string | null
+  nuvei_transaction_id: string | null
+  paid_at: string | null
+  buyer_full_name: string
+  buyer_email: string
+  buyer_phone: string | null
+  promotion_title_snapshot: string
+  promotion_type_snapshot: string | null
+  benefit_type_snapshot: string | null
+  provider_business_name: string | null
+  provider_phone: string | null
+  provider_whatsapp: string | null
+  provider_address: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  checkout_url?: string | null
+  fulfillment_phase?: PromotionOrderFulfillmentPhase | null
+  fulfillment?: PromotionOrderFulfillment | null
+}
+
+export interface PromotionPaidOrderListResponse {
+  items: PromotionPaidOrder[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface AdminPromotionOrderFulfillment extends PromotionOrderFulfillment {
+  promotion_title_snapshot: string
+  amount_usd: number | string
+  buyer_full_name: string
+  buyer_email: string
+  buyer_phone?: string | null
+  provider_name: string
+  provider_email: string
+  provider_business_name?: string | null
+  paid_at?: string | null
+  nuvei_transaction_id?: string | null
+}
+
+export interface AdminPromotionOrderFulfillmentDetail
+  extends AdminPromotionOrderFulfillment {
+  buyer_user_id: string
+  promotion_id: string
+}
+
+export interface AdminPromotionOrderFulfillmentList {
+  items: AdminPromotionOrderFulfillment[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface PromotionFulfillmentReviewAction {
+  status: "verified" | "rejected"
+  admin_notes?: string | null
+}
+
+export interface AdminProviderOption {
+  id: string
+  full_name: string
+  email: string
+}
+
+export interface AdminProviderList {
+  items: AdminProviderOption[]
+  total: number
+}

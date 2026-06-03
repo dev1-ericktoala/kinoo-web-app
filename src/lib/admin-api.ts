@@ -21,6 +21,10 @@ import type {
   PromotionReviewAction,
   AdminProviderCreditOrderList,
   ProviderCreditOrderRefundResponse,
+  AdminPromotionOrderFulfillmentList,
+  AdminPromotionOrderFulfillmentDetail,
+  PromotionFulfillmentReviewAction,
+  AdminProviderList,
 } from "@/types"
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -33,6 +37,11 @@ function buildQuery(params: Record<string, unknown>): string {
 }
 
 export const adminApi = {
+  providers: {
+    list: (params?: { search?: string; limit?: number }) =>
+      apiClient<AdminProviderList>(`/admin/providers${buildQuery(params || {})}`),
+  },
+
   dashboard: {
     summary: () => apiClient<DashboardSummary>("/admin/dashboard/summary"),
     users: () => apiClient<UsersAnalytics>("/admin/dashboard/users"),
@@ -157,10 +166,35 @@ export const adminApi = {
       offset?: number
       status?: string
       search?: string
+      date_from?: string
+      date_to?: string
     }) =>
       apiClient<AdminProviderCreditOrderList>(
         `/admin/credits/orders${buildQuery(params)}`,
       ),
+
+    exportOrdersCsv: async (params: {
+      status?: string
+      search?: string
+      provider_id?: string
+      provider_search?: string
+      date_from?: string
+      date_to?: string
+    }) => {
+      const token = getAccessToken()
+      const res = await fetch(
+        `${API_BASE_URL}/admin/credits/orders/export.csv${buildQuery(params)}`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || "Error al exportar CSV")
+      }
+      return res.blob()
+    },
 
     refundOrder: (orderId: string) =>
       apiClient<ProviderCreditOrderRefundResponse>(
@@ -179,5 +213,54 @@ export const adminApi = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+  },
+
+  promotionFulfillments: {
+    list: (params: {
+      limit?: number
+      offset?: number
+      status?: string
+      search?: string
+      provider_search?: string
+      submitted_from?: string
+      submitted_to?: string
+    }) =>
+      apiClient<AdminPromotionOrderFulfillmentList>(
+        `/admin/promotion-fulfillments${buildQuery(params)}`,
+      ),
+
+    get: (fulfillmentId: string) =>
+      apiClient<AdminPromotionOrderFulfillmentDetail>(
+        `/admin/promotion-fulfillments/${fulfillmentId}`,
+      ),
+
+    review: (fulfillmentId: string, data: PromotionFulfillmentReviewAction) =>
+      apiClient<AdminPromotionOrderFulfillmentDetail>(
+        `/admin/promotion-fulfillments/${fulfillmentId}`,
+        { method: "PATCH", body: JSON.stringify(data) },
+      ),
+
+    exportCsv: async (params: {
+      status?: string
+      search?: string
+      provider_id?: string
+      provider_search?: string
+      submitted_from?: string
+      submitted_to?: string
+    }) => {
+      const token = getAccessToken()
+      const res = await fetch(
+        `${API_BASE_URL}/admin/promotion-fulfillments/export.csv${buildQuery(params)}`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || "Error al exportar CSV")
+      }
+      return res.blob()
+    },
   },
 }
