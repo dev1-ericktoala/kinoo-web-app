@@ -90,6 +90,9 @@ export interface Promotion {
   status: PromotionStatus
   deactivated_at: string | null
   deactivation_reason: string | null
+  admin_suspended: boolean
+  admin_suspended_at: string | null
+  admin_suspended_reason: string | null
   created_at: string
   updated_at: string
   redemptions_count: number
@@ -276,6 +279,36 @@ export interface ReferralsAnalytics {
   conversion_rate: number
   referrals_by_month: CountByLabel[]
   top_referrers: CountByLabel[]
+}
+
+export interface AdminReferralCode {
+  id: string
+  code: string
+  title: string
+  description?: string | null
+  is_active: boolean
+  usage_count: number
+  max_uses?: number | null
+  expires_at?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminCreateReferralCodeRequest {
+  code: string
+  title: string
+  description?: string
+  max_uses?: number
+  expires_at?: string
+}
+
+export interface AdminUpdateReferralCodeRequest {
+  title?: string
+  description?: string | null
+  is_active?: boolean
+  max_uses?: number | null
+  expires_at?: string | null
 }
 
 export interface EngagementAnalytics {

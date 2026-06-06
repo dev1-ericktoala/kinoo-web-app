@@ -83,6 +83,8 @@ export function RecentPromotions({ promotions }: RecentPromotionsProps) {
                     status={promo.status}
                     isActive={promo.is_active}
                     reason={promo.deactivation_reason}
+                    adminSuspended={promo.admin_suspended}
+                    adminSuspendedReason={promo.admin_suspended_reason}
                   />
                 </TableCell>
                 <TableCell className="text-sm text-right tabular-nums">

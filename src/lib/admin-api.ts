@@ -25,6 +25,9 @@ import type {
   AdminPromotionOrderFulfillmentDetail,
   PromotionFulfillmentReviewAction,
   AdminProviderList,
+  AdminReferralCode,
+  AdminCreateReferralCodeRequest,
+  AdminUpdateReferralCodeRequest,
 } from "@/types"
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -211,6 +214,49 @@ export const adminApi = {
     review: (promotionId: string, data: PromotionReviewAction) =>
       apiClient<Promotion>(`/admin/promotions/${promotionId}/review`, {
         method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  publications: {
+    list: (params?: { search?: string; include_inactive?: boolean }) =>
+      apiClient<Promotion[]>(
+        `/admin/promotions${buildQuery({
+          include_inactive: true,
+          ...params,
+        })}`,
+      ),
+    setAdminSuspension: (
+      promotionId: string,
+      data: { suspended: boolean; reason?: string | null },
+    ) =>
+      apiClient<Promotion>(
+        `/admin/promotions/${promotionId}/admin-suspension`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      ),
+  },
+
+  referralCodes: {
+    list: (params?: { search?: string; active_only?: boolean }) =>
+      apiClient<AdminReferralCode[]>(
+        `/admin/referral-codes${buildQuery(params || {})}`,
+      ),
+
+    get: (id: string) =>
+      apiClient<AdminReferralCode>(`/admin/referral-codes/${id}`),
+
+    create: (data: AdminCreateReferralCodeRequest) =>
+      apiClient<AdminReferralCode>("/admin/referral-codes", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: AdminUpdateReferralCodeRequest) =>
+      apiClient<AdminReferralCode>(`/admin/referral-codes/${id}`, {
+        method: "PATCH",
         body: JSON.stringify(data),
       }),
   },

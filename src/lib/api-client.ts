@@ -184,6 +184,14 @@ export const api = {
       apiClient<{ data: import("@/types").PlaceResult[] }>(
         `/places/search?q=${encodeURIComponent(query)}`,
       ),
+    fromCoordinates: (lat: number, lng: number) =>
+      apiClient<{ data: import("@/types").PlaceResult }>(
+        "/places/from-coordinates",
+        {
+          method: "POST",
+          body: JSON.stringify({ lat, lng }),
+        },
+      ),
   },
 
   locations: {

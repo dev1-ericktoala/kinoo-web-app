@@ -284,8 +284,8 @@ export default function CreditsPage() {
             Comprar créditos
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            1 crédito = 1 USD. Los créditos se usan para publicidad en Kynoo
-            (por ejemplo, al agregar ubicaciones en tus promociones).
+            1 crédito = 1 USD. Los créditos se usan al agregar ubicaciones en
+            tus promociones (los servicios no consumen créditos).
           </p>
         </div>
         <CreditPacksGrid

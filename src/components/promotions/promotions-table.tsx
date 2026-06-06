@@ -179,6 +179,8 @@ export function PromotionsTable({
                       status={promo.status}
                       isActive={promo.is_active}
                       reason={promo.deactivation_reason}
+                      adminSuspended={promo.admin_suspended}
+                      adminSuspendedReason={promo.admin_suspended_reason}
                     />
                   </TableCell>
                   <TableCell className="text-sm tabular-nums text-muted-foreground">
@@ -202,6 +204,7 @@ export function PromotionsTable({
                     <ActiveToggle
                       promotionId={promo.id}
                       isActive={promo.is_active}
+                      adminSuspended={promo.admin_suspended}
                       onToggled={(newValue) =>
                         onPromotionUpdated(promo.id, { is_active: newValue })
                       }

@@ -19,6 +19,8 @@ export const ROUTES = {
   ADMIN_EMERGENCY_CREDITS: "/admin/emergency-credits",
   ADMIN_AD_CREDITS: "/admin/ad-credits",
   ADMIN_PROMOTION_FULFILLMENTS: "/admin/promotion-fulfillments",
+  ADMIN_PUBLICATIONS: "/admin/publications",
+  ADMIN_REFERRAL_CODES: "/admin/referral-codes",
   ADMIN_KNOWLEDGE: "/admin/knowledge",
   ADMIN_KNOWLEDGE_DETAIL: (id: string) => `/admin/knowledge/${id}`,
 } as const

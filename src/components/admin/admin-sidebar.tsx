@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   ClipboardCheck,
+  Megaphone,
+  Ticket,
   ScrollText,
   Activity,
   Phone,
@@ -56,6 +58,16 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
       label: "Revisión",
       href: ROUTES.ADMIN_REVIEW,
       badge: pendingCount,
+    },
+    {
+      icon: Megaphone,
+      label: "Publicaciones",
+      href: ROUTES.ADMIN_PUBLICATIONS,
+    },
+    {
+      icon: Ticket,
+      label: "Códigos referido",
+      href: ROUTES.ADMIN_REFERRAL_CODES,
     },
     { icon: ScrollText, label: "Auditoría", href: ROUTES.ADMIN_AUDIT_LOGS },
     { icon: Activity, label: "Eventos", href: ROUTES.ADMIN_EVENTS },

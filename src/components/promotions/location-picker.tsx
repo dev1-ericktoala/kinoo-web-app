@@ -41,17 +41,25 @@ interface MapObjects {
 
 // ─── Constants ──────────────────────────────────────────
 
-const DEFAULT_CENTER = { lat: -2.1894, lng: -79.8891 }
+const DEFAULT_CENTER = { lat: -1.4386, lng: -78.3885 } // -1.438604114964334, -78.388503084837
+const DEFAULT_COUNTRY_ZOOM = 7
 const DEFAULT_ZOOM = 12
 const DEBOUNCE_MS = 300
 const MAX_LOCATIONS = 5
+
+function showDefaultCountryView(map: google.maps.Map) {
+  map.setCenter(DEFAULT_CENTER)
+  map.setZoom(DEFAULT_COUNTRY_ZOOM)
+}
 
 const POINT_COLOR = "#FF6B35"
 const POINT_RADIUS = 1000
 const CITY_COLOR = "#4A90D9"
 const CITY_RADIUS = 10000
 
-// Module-level flag: setOptions must only be called once
+const PREVIEW_POINT_COLOR = "#8B5CF6"
+const PREVIEW_CITY_COLOR = "#7C3AED"
+
 let googleMapsInitialized = false
 
 // ─── Component ──────────────────────────────────────────
@@ -59,28 +67,30 @@ let googleMapsInitialized = false
 export function LocationPicker({ promotionId, promotionType }: LocationPickerProps) {
   const { toast } = useToast()
   const { balance: creditBalance, setBalance } = useProviderCredits()
+  const chargesCredits = promotionType === "promotion"
 
-  // State
   const [locations, setLocations] = useState<PromotionLocation[]>([])
   const [searchResults, setSearchResults] = useState<PlaceResult[]>([])
   const [query, setQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  const [isResolvingPlace, setIsResolvingPlace] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [loadingLocations, setLoadingLocations] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [locationPendingRemoval, setLocationPendingRemoval] =
     useState<PromotionLocation | null>(null)
+  const [mapReady, setMapReady] = useState(false)
 
-  // Selection confirmation state
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null)
   const [coverageType, setCoverageType] = useState<CoverageType>("point")
   const [pricing, setPricing] = useState<AdCreditLocationPricing | null>(null)
 
-  // Refs
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<google.maps.Map | null>(null)
   const mapObjectsRef = useRef<Map<string, MapObjects>>(new Map())
+  const previewMarkerRef = useRef<google.maps.Marker | null>(null)
+  const previewCircleRef = useRef<google.maps.Circle | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -99,13 +109,18 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
       : null
 
   const canAfford =
+    !chargesCredits ||
     locationCost == null ||
     creditBalance == null ||
     creditBalance >= locationCost
 
-  // ─── Precios por ubicación (saldo vía ProviderCredits) ──
+  const atLimit = locations.length >= MAX_LOCATIONS
+  const mapInteractive = !atLimit && !isAdding && !isResolvingPlace
+
+  // ─── Precios por ubicación (solo promociones) ───────────
 
   useEffect(() => {
+    if (!chargesCredits) return
     let cancelled = false
     async function loadPricing() {
       try {
@@ -119,7 +134,7 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [chargesCredits])
 
   // ─── Map initialization ─────────────────────────────
 
@@ -142,12 +157,78 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
 
     mapInstanceRef.current = new google.maps.Map(mapRef.current, {
       center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
+      zoom: DEFAULT_COUNTRY_ZOOM,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
     })
+    showDefaultCountryView(mapInstanceRef.current)
+    setMapReady(true)
   }, [])
+
+  // ─── Preview layer ──────────────────────────────────
+
+  const clearPreview = useCallback(() => {
+    previewMarkerRef.current?.setMap(null)
+    previewCircleRef.current?.setMap(null)
+    previewMarkerRef.current = null
+    previewCircleRef.current = null
+  }, [])
+
+  const showPreview = useCallback(
+    (lat: number, lng: number, coverage: CoverageType) => {
+      const map = mapInstanceRef.current
+      if (!map) return
+
+      clearPreview()
+
+      const isCity = coverage === "city"
+      const position = { lat, lng }
+      const color = isCity ? PREVIEW_CITY_COLOR : PREVIEW_POINT_COLOR
+
+      previewMarkerRef.current = new google.maps.Marker({
+        map,
+        position,
+        zIndex: 1000,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        },
+      })
+
+      previewCircleRef.current = new google.maps.Circle({
+        map,
+        center: position,
+        radius: isCity ? CITY_RADIUS : POINT_RADIUS,
+        fillColor: color,
+        fillOpacity: 0.12,
+        strokeColor: color,
+        strokeOpacity: 0.55,
+        strokeWeight: 2,
+        clickable: false,
+        zIndex: 999,
+      })
+
+      const bounds = previewCircleRef.current.getBounds()
+      if (bounds) {
+        map.fitBounds(bounds, 56)
+      } else {
+        map.setCenter(position)
+        map.setZoom(isCity ? 11 : DEFAULT_ZOOM)
+      }
+    },
+    [clearPreview],
+  )
+
+  useEffect(() => {
+    if (selectedPlace) {
+      showPreview(selectedPlace.lat, selectedPlace.lng, coverageType)
+    }
+  }, [coverageType, selectedPlace, showPreview])
 
   // ─── Pin helpers ────────────────────────────────────
 
@@ -189,7 +270,12 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
 
   const fitBounds = useCallback((locs: PromotionLocation[]) => {
     const map = mapInstanceRef.current
-    if (!map || locs.length === 0) return
+    if (!map) return
+
+    if (locs.length === 0) {
+      showDefaultCountryView(map)
+      return
+    }
 
     if (locs.length === 1) {
       map.setCenter({ lat: locs[0].place.lat, lng: locs[0].place.lng })
@@ -212,7 +298,6 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
         await initMap()
         const raw = await api.locations.list(promotionId)
         if (cancelled) return
-        // Ensure coverage_type defaults to "point" if backend omits it
         const data = raw.map((loc) => ({
           ...loc,
           coverage_type: loc.coverage_type || ("point" as const),
@@ -228,8 +313,69 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     }
 
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [promotionId, initMap, addPin, fitBounds])
+
+  // ─── Map click → reverse geocode ────────────────────
+
+  const selectPlace = useCallback(
+    (place: PlaceResult) => {
+      setSelectedPlace(place)
+      showPreview(place.lat, place.lng, coverageType)
+    },
+    [coverageType, showPreview],
+  )
+
+  const resolveMapClick = useCallback(
+    async (lat: number, lng: number) => {
+      setIsResolvingPlace(true)
+      try {
+        const res = await api.places.fromCoordinates(lat, lng)
+        selectPlace(res.data)
+      } catch (err) {
+        toast({
+          variant: "destructive",
+          title: "Ubicación no identificada",
+          description:
+            err instanceof ApiError
+              ? err.message
+              : "No se pudo obtener la dirección de ese punto.",
+        })
+      } finally {
+        setIsResolvingPlace(false)
+      }
+    },
+    [selectPlace, toast],
+  )
+
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map || !mapReady) return
+
+    const listener = map.addListener(
+      "click",
+      (event: google.maps.MapMouseEvent) => {
+        if (!mapInteractive) return
+        const latLng = event.latLng
+        if (!latLng) return
+        void resolveMapClick(latLng.lat(), latLng.lng())
+      },
+    )
+
+    return () => {
+      google.maps.event.removeListener(listener)
+    }
+  }, [mapReady, mapInteractive, resolveMapClick])
+
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+    map.setOptions({
+      draggableCursor: mapInteractive ? "crosshair" : undefined,
+    })
+  }, [mapInteractive])
 
   // ─── Search ─────────────────────────────────────────
 
@@ -259,18 +405,20 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     }, DEBOUNCE_MS)
   }
 
-  // ─── Select from dropdown → show confirmation ─────
-
   function handleDropdownSelect(place: PlaceResult) {
     setShowDropdown(false)
     setQuery("")
     setSearchResults([])
-    setSelectedPlace(place)
+    selectPlace(place)
+  }
 
-    // Heuristic: if address looks like just a city name (no street number), preselect "city"
-    const addr = place.address || ""
-    const looksLikeCity = !addr.match(/\d/) || addr.toLowerCase() === (place.city || "").toLowerCase()
-    setCoverageType(looksLikeCity ? "city" : "point")
+  function handleCancelSelection() {
+    clearPreview()
+    setSelectedPlace(null)
+    if (locations.length === 0) {
+      const map = mapInstanceRef.current
+      if (map) showDefaultCountryView(map)
+    }
   }
 
   // ─── Confirm add location ────────────────────────
@@ -280,14 +428,18 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     setIsAdding(true)
 
     try {
-      const rawLocation = await api.locations.add(promotionId, selectedPlace.id, coverageType)
-      // Always use the user's selection — backend response may default to "point"
+      const rawLocation = await api.locations.add(
+        promotionId,
+        selectedPlace.id,
+        coverageType,
+      )
       const newLocation: PromotionLocation = {
         ...rawLocation,
         coverage_type: coverageType,
       }
       setLocations((prev) => [...prev, newLocation])
       addPin(newLocation)
+      clearPreview()
       setSelectedPlace(null)
       if (newLocation.balance_after != null) {
         setBalance(Number(newLocation.balance_after))
@@ -372,9 +524,57 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // ─── Render ─────────────────────────────────────────
+  // ─── Coverage selector ──────────────────────────────
 
-  const atLimit = locations.length >= MAX_LOCATIONS
+  function renderCoverageSelector() {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">
+          Tipo de cobertura
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCoverageType("point")}
+            disabled={atLimit || isAdding}
+            className={`flex-1 rounded-lg border-2 px-3 py-2.5 text-center transition-colors disabled:opacity-50 ${
+              coverageType === "point"
+                ? "border-[#FF6B35] bg-[#FF6B35]/10"
+                : "border-border hover:border-muted-foreground/30"
+            }`}
+          >
+            <p className="text-sm font-medium">Punto exacto (1 km)</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Radio de 1 km
+              {chargesCredits && pricing != null && (
+                <> · {Number(pricing.point_credits)} créditos</>
+              )}
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCoverageType("city")}
+            disabled={atLimit || isAdding}
+            className={`flex-1 rounded-lg border-2 px-3 py-2.5 text-center transition-colors disabled:opacity-50 ${
+              coverageType === "city"
+                ? "border-[#4A90D9] bg-[#4A90D9]/10"
+                : "border-border hover:border-muted-foreground/30"
+            }`}
+          >
+            <p className="text-sm font-medium">Toda la ciudad</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ciudad completa
+              {chargesCredits && pricing != null && (
+                <> · {Number(pricing.city_credits)} créditos</>
+              )}
+            </p>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Render ─────────────────────────────────────────
 
   return (
     <div className="space-y-4">
@@ -385,7 +585,7 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
         </p>
       </div>
 
-      {pricing != null && (
+      {chargesCredits && pricing != null && (
         <p className="text-sm text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
           Créditos por ubicación:{" "}
           <strong>{Number(pricing.point_credits)}</strong> (punto) ·{" "}
@@ -401,107 +601,104 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
         </p>
       )}
 
-      <CreditsNonRefundableNotice variant="location-spend" />
+      {!chargesCredits && (
+        <p className="text-sm text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          Las ubicaciones de servicios no consumen créditos publicitarios.
+        </p>
+      )}
 
-      {/* Search input */}
-      {!selectedPlace && (
-        <div className="relative" ref={dropdownRef}>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={atLimit ? "Máximo de ubicaciones alcanzado" : "Buscar dirección o lugar..."}
-              disabled={atLimit || isAdding}
-              className="h-9 pl-9"
-            />
-            {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-            )}
+      {chargesCredits && <CreditsNonRefundableNotice variant="location-spend" />}
+
+      {renderCoverageSelector()}
+
+      {/* Search */}
+      <div className="relative" ref={dropdownRef}>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={
+              atLimit
+                ? "Máximo de ubicaciones alcanzado"
+                : "Buscar dirección o lugar..."
+            }
+            disabled={atLimit || isAdding || isResolvingPlace}
+            className="h-9 pl-9"
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
+
+        {showDropdown && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-[240px] overflow-y-auto">
+            {searchResults.map((place) => (
+              <button
+                key={place.id}
+                type="button"
+                onClick={() => handleDropdownSelect(place)}
+                className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/40 last:border-b-0"
+              >
+                <p className="text-sm truncate">{place.address || "Sin dirección"}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {[place.city, place.country].filter(Boolean).join(", ")}
+                </p>
+              </button>
+            ))}
           </div>
+        )}
+      </div>
 
-          {/* Dropdown results */}
-          {showDropdown && (
-            <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-[240px] overflow-y-auto">
-              {searchResults.map((place) => (
-                <button
-                  key={place.id}
-                  type="button"
-                  onClick={() => handleDropdownSelect(place)}
-                  className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/40 last:border-b-0"
-                >
-                  <p className="text-sm truncate">{place.address || "Sin dirección"}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {[place.city, place.country].filter(Boolean).join(", ")}
-                  </p>
-                </button>
-              ))}
+      {/* Map */}
+      <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">
+          {atLimit
+            ? "Has alcanzado el máximo de ubicaciones."
+            : "Haz clic en el mapa para seleccionar un punto. El círculo violeta es la previsualización."}
+        </p>
+        <div className="relative">
+          <div
+            ref={mapRef}
+            className="w-full rounded-lg border border-border/60 bg-muted/30"
+            style={{ height: 400 }}
+          />
+          {isResolvingPlace && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/40">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Coverage type confirmation panel */}
+      {/* Confirmation panel */}
       {selectedPlace && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
           <div className="flex items-start gap-2">
             <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{selectedPlace.address || "Sin dirección"}</p>
+              <p className="text-sm font-medium truncate">
+                {selectedPlace.address || "Sin dirección"}
+              </p>
               <p className="text-xs text-muted-foreground truncate">
                 {[selectedPlace.city, selectedPlace.country].filter(Boolean).join(", ")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Cobertura:{" "}
+                <span className="font-medium text-foreground">
+                  {coverageType === "city" ? "Toda la ciudad" : "Punto exacto (1 km)"}
+                </span>
               </p>
             </div>
           </div>
 
-          <p className="text-xs font-medium text-muted-foreground">
-            ¿Cómo quieres cubrir esta ubicación?
-          </p>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setCoverageType("point")}
-              className={`flex-1 rounded-lg border-2 px-3 py-2.5 text-center transition-colors ${
-                coverageType === "point"
-                  ? "border-[#FF6B35] bg-[#FF6B35]/10"
-                  : "border-border hover:border-muted-foreground/30"
-              }`}
-            >
-              <p className="text-sm font-medium">Punto exacto (1km)</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Radio de 1km
-                {pricing != null && (
-                  <> · {Number(pricing.point_credits)} créditos</>
-                )}
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCoverageType("city")}
-              className={`flex-1 rounded-lg border-2 px-3 py-2.5 text-center transition-colors ${
-                coverageType === "city"
-                  ? "border-[#4A90D9] bg-[#4A90D9]/10"
-                  : "border-border hover:border-muted-foreground/30"
-              }`}
-            >
-              <p className="text-sm font-medium">Toda la ciudad</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Ciudad completa
-                {pricing != null && (
-                  <> · {Number(pricing.city_credits)} créditos</>
-                )}
-              </p>
-            </button>
-          </div>
-
-          {locationCost != null && creditBalance != null && !canAfford && (
+          {chargesCredits && locationCost != null && creditBalance != null && !canAfford && (
             <p className="text-xs text-red-600">
               Saldo insuficiente: necesitas {locationCost} créditos y tienes {creditBalance}.
             </p>
           )}
 
-          {locationCost != null && canAfford && (
+          {chargesCredits && locationCost != null && canAfford && (
             <CreditsNonRefundableNotice variant="location-spend" className="text-[11px]" />
           )}
 
@@ -510,7 +707,7 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setSelectedPlace(null)}
+              onClick={handleCancelSelection}
               disabled={isAdding}
             >
               Cancelar
@@ -523,20 +720,13 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
               className="bg-[#4a6b1e] hover:bg-[#3d5a18] text-white"
             >
               {isAdding && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-              {locationCost != null
+              {chargesCredits && locationCost != null
                 ? `Agregar (${locationCost} créditos)`
                 : "Agregar ubicación"}
             </Button>
           </div>
         </div>
       )}
-
-      {/* Map */}
-      <div
-        ref={mapRef}
-        className="w-full rounded-lg border border-border/60 bg-muted/30"
-        style={{ height: 400 }}
-      />
 
       {/* Location list */}
       {loadingLocations ? (
@@ -610,14 +800,20 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
                     {locationPendingRemoval.place.address || "Sin dirección"}
                   </p>
                 )}
-                <CreditsNonRefundableNotice
-                  variant="location-remove"
-                  creditsCharged={
-                    locationPendingRemoval?.credits_charged != null
-                      ? Number(locationPendingRemoval.credits_charged)
-                      : null
-                  }
-                />
+                {chargesCredits ? (
+                  <CreditsNonRefundableNotice
+                    variant="location-remove"
+                    creditsCharged={
+                      locationPendingRemoval?.credits_charged != null
+                        ? Number(locationPendingRemoval.credits_charged)
+                        : null
+                    }
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Esta ubicación se eliminará de tu servicio.
+                  </p>
+                )}
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -641,8 +837,10 @@ export function LocationPicker({ promotionId, promotionType }: LocationPickerPro
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Eliminando…
                 </>
-              ) : (
+              ) : chargesCredits ? (
                 "Eliminar sin reembolso"
+              ) : (
+                "Eliminar"
               )}
             </Button>
           </DialogFooter>

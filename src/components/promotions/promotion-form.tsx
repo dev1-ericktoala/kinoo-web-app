@@ -197,7 +197,7 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
     }
 
     const payload = {
-      type: values.type,
+      type: mode === "edit" && initialData ? initialData.type : values.type,
       title: values.title,
       description: values.description || null,
       benefit_type: values.benefit_type,
@@ -284,30 +284,40 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
             Elige si quieres publicar una promoción o un servicio
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex gap-3">
-            {(["promotion", "service"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => form.setValue("type", t)}
-                className={`flex-1 rounded-lg border-2 p-4 text-center transition-colors ${
-                  watchType === t
-                    ? "border-foreground bg-muted/50"
-                    : "border-border hover:border-muted-foreground/30"
-                }`}
-              >
-                <p className="text-sm font-medium">
-                  {t === "promotion" ? "Promoción" : "Servicio"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t === "promotion"
-                    ? "Descuentos, productos gratis, cupones"
-                    : "Servicios presenciales o virtuales"}
-                </p>
-              </button>
-            ))}
+            {(["promotion", "service"] as const).map((t) => {
+              const isSelected = watchType === t
+              const isLocked = mode === "edit"
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => form.setValue("type", t)}
+                  className={`flex-1 rounded-lg border-2 p-4 text-center transition-colors ${
+                    isSelected
+                      ? "border-foreground bg-muted/50"
+                      : isLocked
+                        ? "border-border opacity-50 cursor-not-allowed"
+                        : "border-border hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <p className="text-sm font-medium">
+                    {t === "promotion" ? "Promoción" : "Servicio"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t === "promotion"
+                      ? "Descuentos, productos gratis, cupones"
+                      : "Servicios presenciales o virtuales"}
+                  </p>
+                </button>
+              )
+            })}
           </div>
+          <p className="text-xs text-muted-foreground">
+            Una vez creada la publicación no se permite cambiar de tipo.
+          </p>
         </CardContent>
       </Card>
 
@@ -551,7 +561,7 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
           {mode === "edit" && initialData ? (
             <LocationPicker
               promotionId={initialData.id}
-              promotionType={watchType}
+              promotionType={initialData.type}
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
