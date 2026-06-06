@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react"
 import { ROUTES } from "@/lib/constants"
-import { adminApi } from "@/lib/admin-api"
+import { useAdminBadges } from "@/providers/admin-provider"
 import { cn } from "@/lib/utils"
 
 interface NavItem {
@@ -36,20 +36,8 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
   const pathname = usePathname()
-  const [pendingCount, setPendingCount] = useState(0)
-  const [pendingFulfillments, setPendingFulfillments] = useState(0)
+  const { pendingReviewCount, pendingFulfillmentCount } = useAdminBadges()
   const [mobileOpen, setMobileOpen] = useState(false)
-
-  useEffect(() => {
-    adminApi.promotionReview
-      .listPending()
-      .then((list) => setPendingCount(list.length))
-      .catch(() => {})
-    adminApi.promotionFulfillments
-      .list({ status: "submitted", limit: 1, offset: 0 })
-      .then((res) => setPendingFulfillments(res.total))
-      .catch(() => {})
-  }, [])
 
   const navItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: ROUTES.ADMIN_DASHBOARD },
@@ -57,7 +45,7 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
       icon: ClipboardCheck,
       label: "Revisión",
       href: ROUTES.ADMIN_REVIEW,
-      badge: pendingCount,
+      badge: pendingReviewCount,
     },
     {
       icon: Megaphone,
@@ -85,7 +73,7 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
       icon: PackageCheck,
       label: "Entregas de servicio",
       href: ROUTES.ADMIN_PROMOTION_FULFILLMENTS,
-      badge: pendingFulfillments,
+      badge: pendingFulfillmentCount,
     },
     {
       icon: BookOpen,

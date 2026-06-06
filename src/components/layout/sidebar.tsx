@@ -69,10 +69,10 @@ export function Sidebar() {
             href={ROUTES.DASHBOARD}
             className="text-lg font-bold tracking-tight text-foreground"
           >
-            KINOO
+            KYNOO
           </Link>
-          <span className="ml-2 text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            Panel
+          <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
+            Proveedor
           </span>
         </div>
 

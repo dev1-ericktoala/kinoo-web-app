@@ -6,6 +6,7 @@ import { es } from "date-fns/locale"
 import { adminApi } from "@/lib/admin-api"
 import { ApiError } from "@/lib/api-client"
 import { BENEFIT_TYPE_LABELS, PROMOTION_TYPE_LABELS } from "@/lib/constants"
+import { useAdminBadges } from "@/providers/admin-provider"
 import {
   CheckCircle,
   XCircle,
@@ -129,6 +130,7 @@ function ReviewCard({
   promo: Promotion
   onRemove: () => void
 }) {
+  const { notifyPendingReviewProcessed } = useAdminBadges()
   const [processing, setProcessing] = useState<"approve" | "reject" | null>(
     null,
   )
@@ -141,6 +143,7 @@ function ReviewCard({
     setCardError(null)
     try {
       await adminApi.promotionReview.review(promo.id, { action: "approve" })
+      notifyPendingReviewProcessed()
       onRemove()
     } catch (err) {
       setCardError(
@@ -159,6 +162,7 @@ function ReviewCard({
         action: "reject",
         reason: reason.trim() || undefined,
       })
+      notifyPendingReviewProcessed()
       onRemove()
     } catch (err) {
       setCardError(

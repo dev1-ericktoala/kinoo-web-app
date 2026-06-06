@@ -46,7 +46,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith(ROUTES.RESERVATIONS)) return "Reservas"
   if (pathname === ROUTES.CREDITS) return "Créditos"
   if (pathname === ROUTES.PROFILE) return "Perfil"
-  return "KINOO"
+  return "Panel Proveedor"
 }
 
 export function Topbar() {
@@ -77,9 +77,9 @@ export function Topbar() {
         </SheetTrigger>
         <SheetContent side="left" className="w-[260px] p-0">
           <div className="flex items-center h-14 px-5">
-            <span className="text-lg font-bold tracking-tight">KINOO</span>
-            <span className="ml-2 text-[11px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              Panel
+            <span className="text-lg font-bold tracking-tight">KYNOO</span>
+            <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
+              Proveedor
             </span>
           </div>
           <Separator />

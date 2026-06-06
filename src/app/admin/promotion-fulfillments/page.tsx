@@ -17,6 +17,7 @@ import {
 import { AdminCsvExportDialog } from "@/components/admin/admin-csv-export-dialog"
 import { adminApi } from "@/lib/admin-api"
 import { ApiError } from "@/lib/api-client"
+import { useAdminBadges } from "@/providers/admin-provider"
 import {
   ADMIN_FILTER_INPUT_CLASS,
   ADMIN_FILTER_LABEL_CLASS,
@@ -66,6 +67,7 @@ function statusLabel(status: string) {
 }
 
 export default function AdminPromotionFulfillmentsPage() {
+  const { notifyPendingFulfillmentProcessed } = useAdminBadges()
   const [result, setResult] = useState<AdminPromotionOrderFulfillmentList | null>(
     null,
   )
@@ -157,6 +159,7 @@ export default function AdminPromotionFulfillmentsPage() {
 
   async function submitReview(decision: "verified" | "rejected") {
     if (!reviewTarget) return
+    const wasPendingReview = reviewTarget.status === "submitted"
     setReviewLoading(true)
     setReviewError(null)
     try {
@@ -164,6 +167,9 @@ export default function AdminPromotionFulfillmentsPage() {
         status: decision,
         admin_notes: adminNotes.trim() || null,
       })
+      if (wasPendingReview) {
+        notifyPendingFulfillmentProcessed()
+      }
       setSuccessMessage(
         decision === "verified"
           ? "Entrega verificada correctamente"
