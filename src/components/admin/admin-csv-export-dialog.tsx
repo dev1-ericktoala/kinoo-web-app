@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { Download, Loader2 } from "lucide-react"
 import { adminApi } from "@/lib/admin-api"
 import type { AdminProviderOption } from "@/types"
@@ -70,6 +70,7 @@ function ProviderCombobox({
   const [inputValue, setInputValue] = useState("")
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const listboxId = useId()
 
   useEffect(() => {
     if (!providerId) return
@@ -119,6 +120,7 @@ function ProviderCombobox({
         type="text"
         role="combobox"
         aria-expanded={open}
+        aria-controls={listboxId}
         aria-autocomplete="list"
         placeholder={`${ALL_PROVIDERS_LABEL} — escribe para filtrar…`}
         value={inputValue}
@@ -132,6 +134,7 @@ function ProviderCombobox({
       />
       {open && (
         <ul
+          id={listboxId}
           className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg"
           role="listbox"
         >
