@@ -21,6 +21,8 @@ export const ROUTES = {
   ADMIN_PROMOTION_FULFILLMENTS: "/admin/promotion-fulfillments",
   ADMIN_PUBLICATIONS: "/admin/publications",
   ADMIN_REFERRAL_CODES: "/admin/referral-codes",
+  ADMIN_PROVIDERS: "/admin/providers",
+  ADMIN_APP_USERS: "/admin/users",
   ADMIN_KNOWLEDGE: "/admin/knowledge",
   ADMIN_KNOWLEDGE_DETAIL: (id: string) => `/admin/knowledge/${id}`,
 } as const

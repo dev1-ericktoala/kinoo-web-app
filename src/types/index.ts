@@ -725,7 +725,79 @@ export interface AdminProviderOption {
   email: string
 }
 
+export interface AdminProviderListItem extends AdminProviderOption {
+  status_code: "active" | "blocked" | "suspended"
+  email_verified: boolean
+  account_activated: boolean
+  balance_credits: string
+  created_at: string | null
+}
+
 export interface AdminProviderList {
-  items: AdminProviderOption[]
+  items: AdminProviderListItem[]
   total: number
 }
+
+export interface AdminCreateProviderRequest {
+  full_name: string
+  email: string
+  initial_credits?: number
+}
+
+export interface AdminCreateProviderResponse {
+  id: string
+  full_name: string
+  email: string
+  status_code: "active" | "blocked" | "suspended"
+  email_verified: boolean
+  account_activated: boolean
+  initial_credits: string
+  welcome_email_sent: boolean
+}
+
+export type ProviderStatusCode = "active" | "blocked" | "suspended"
+
+export interface AdminUpdateProviderRequest {
+  full_name?: string
+  email?: string
+  status_code?: ProviderStatusCode
+}
+
+export interface AdminUpdateProviderResponse {
+  id: string
+  full_name: string
+  email: string
+  status_code: ProviderStatusCode
+  email_verified: boolean
+  account_activated: boolean
+  balance_credits: string
+  created_at: string | null
+}
+
+export type AppUserRoleCode = "owner" | "member"
+
+export interface AdminAppUserListItem {
+  id: string
+  full_name: string
+  email: string
+  role_code: AppUserRoleCode
+  status_code: "active" | "blocked" | "suspended"
+  email_verified: boolean
+  registration_completed: boolean
+  referral_points: number
+  created_at: string | null
+  last_login_at: string | null
+}
+
+export interface AdminAppUserList {
+  items: AdminAppUserListItem[]
+  total: number
+}
+
+export type AppUserStatusCode = "active" | "blocked" | "suspended"
+
+export interface AdminUpdateAppUserRequest {
+  status_code: AppUserStatusCode
+}
+
+export type AdminUpdateAppUserResponse = AdminAppUserListItem

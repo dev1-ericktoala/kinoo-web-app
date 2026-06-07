@@ -38,7 +38,9 @@ export default function LoginPage() {
     } catch (err) {
       setError(
         err instanceof ApiError
-          ? err.message
+          ? err.title
+            ? `${err.title}. ${err.message}`
+            : err.message
           : "Error al enviar el código. Intenta de nuevo.",
       )
     } finally {
@@ -73,7 +75,9 @@ export default function LoginPage() {
     } catch (err) {
       setError(
         err instanceof ApiError
-          ? err.message
+          ? err.title
+            ? `${err.title}. ${err.message}`
+            : err.message
           : "Código inválido. Intenta de nuevo.",
       )
     } finally {

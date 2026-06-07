@@ -25,6 +25,13 @@ import type {
   AdminPromotionOrderFulfillmentDetail,
   PromotionFulfillmentReviewAction,
   AdminProviderList,
+  AdminCreateProviderRequest,
+  AdminCreateProviderResponse,
+  AdminUpdateProviderRequest,
+  AdminUpdateProviderResponse,
+  AdminAppUserList,
+  AdminUpdateAppUserRequest,
+  AdminUpdateAppUserResponse,
   AdminReferralCode,
   AdminCreateReferralCodeRequest,
   AdminUpdateReferralCodeRequest,
@@ -43,6 +50,29 @@ export const adminApi = {
   providers: {
     list: (params?: { search?: string; limit?: number }) =>
       apiClient<AdminProviderList>(`/admin/providers${buildQuery(params || {})}`),
+
+    create: (data: AdminCreateProviderRequest) =>
+      apiClient<AdminCreateProviderResponse>("/admin/providers", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: AdminUpdateProviderRequest) =>
+      apiClient<AdminUpdateProviderResponse>(`/admin/providers/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  appUsers: {
+    list: (params?: { role?: string; search?: string; limit?: number }) =>
+      apiClient<AdminAppUserList>(`/admin/app-users${buildQuery(params || {})}`),
+
+    update: (id: string, data: AdminUpdateAppUserRequest) =>
+      apiClient<AdminUpdateAppUserResponse>(`/admin/app-users/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
   },
 
   dashboard: {
