@@ -11,6 +11,8 @@ import {
   Phone,
   Search,
   RotateCcw,
+  CheckCircle2,
+  Undo2,
 } from "lucide-react"
 import type { PaginatedActiveCredits } from "@/types"
 
@@ -18,16 +20,20 @@ const LIMIT = 25
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700",
+  calling: "bg-amber-50 text-amber-800",
   inactive: "bg-gray-100 text-gray-600",
-  expired: "bg-red-50 text-red-600",
-  pending: "bg-amber-50 text-amber-700",
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  active: "Activo",
-  inactive: "Inactivo",
-  expired: "Expirado",
-  pending: "Pendiente",
+  active: "Listo para llamar",
+  calling: "En atención",
+  inactive: "Cerrado",
+}
+
+const CLOSE_REASON_LABELS: Record<string, string> = {
+  attended: "Atendida",
+  not_reached: "No contactado",
+  manual: "Manual",
 }
 
 function statusStyle(status: string) {
@@ -38,6 +44,11 @@ function statusLabel(status: string) {
   return STATUS_LABELS[status] || status
 }
 
+function formatDt(value: string | null | undefined) {
+  if (!value) return "—"
+  return format(new Date(value), "dd MMM yyyy HH:mm", { locale: es })
+}
+
 export default function EmergencyCreditsPage() {
   const [result, setResult] = useState<PaginatedActiveCredits | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -46,17 +57,20 @@ export default function EmergencyCreditsPage() {
   const [statusFilter, setStatusFilter] = useState("")
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   const fetchCredits = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
+      const sortBy =
+        statusFilter === "calling" ? "call_initiated_at" : "deactivated_at"
       const data = await adminApi.credits({
         page,
         limit: LIMIT,
         status: statusFilter || undefined,
         search: searchQuery || undefined,
-        sort_by: "deactivated_at",
+        sort_by: sortBy,
         sort_order: "desc",
       })
       setResult(data)
@@ -88,6 +102,44 @@ export default function EmergencyCreditsPage() {
     setPage(1)
   }
 
+  async function handleCloseAttended(creditId: string) {
+    if (
+      !window.confirm(
+        "¿Confirmas que la emergencia fue atendida? El crédito quedará consumido.",
+      )
+    ) {
+      return
+    }
+    setActionLoadingId(creditId)
+    try {
+      await adminApi.closeEmergencyCreditAttended(creditId)
+      await fetchCredits()
+    } catch {
+      setError("No se pudo cerrar el caso")
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  async function handleRelease(creditId: string) {
+    if (
+      !window.confirm(
+        "¿No hubo contacto? El crédito volverá a estar activo para el usuario.",
+      )
+    ) {
+      return
+    }
+    setActionLoadingId(creditId)
+    try {
+      await adminApi.releaseEmergencyCreditCall(creditId)
+      await fetchCredits()
+    } catch {
+      setError("No se pudo liberar el crédito")
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   const totalPages = result ? Math.ceil(result.total / LIMIT) : 0
 
   return (
@@ -103,7 +155,12 @@ export default function EmergencyCreditsPage() {
         )}
       </div>
 
-      {/* Filters */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong>En atención</strong> = el usuario pulsó Llamar. Cierra el caso
+        cuando hayas atendido la emergencia o libera el crédito si no hubo
+        contacto.
+      </div>
+
       <div className="rounded-lg border border-[#e5e7eb] bg-white p-4">
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
@@ -113,7 +170,7 @@ export default function EmergencyCreditsPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Nombre, email, ID, estado..."
+              placeholder="Nombre, email, ID..."
               className="h-9 w-64 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
@@ -125,10 +182,9 @@ export default function EmergencyCreditsPage() {
               className="h-9 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
               <option value="">Todos</option>
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-              <option value="expired">Expirado</option>
-              <option value="pending">Pendiente</option>
+              <option value="calling">En atención</option>
+              <option value="active">Listos para llamar</option>
+              <option value="inactive">Cerrados</option>
             </select>
           </div>
           <button
@@ -145,20 +201,15 @@ export default function EmergencyCreditsPage() {
             <RotateCcw className="h-3.5 w-3.5" />
             Limpiar
           </button>
-          <p className="pb-1.5 text-xs text-gray-400">
-            Ordenado por fecha de desactivación (más reciente primero)
-          </p>
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
-      {/* Content */}
       <div className="rounded-lg border border-[#e5e7eb] bg-white overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -173,8 +224,7 @@ export default function EmergencyCreditsPage() {
           </div>
         ) : (
           <>
-            {/* Desktop table */}
-            <div className="hidden sm:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/50">
@@ -182,16 +232,19 @@ export default function EmergencyCreditsPage() {
                       Usuario
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                       Estado
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Activado
+                      Llamada iniciada
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Desactivado
+                      Monto
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Cierre
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      Acciones
                     </th>
                   </tr>
                 </thead>
@@ -202,22 +255,12 @@ export default function EmergencyCreditsPage() {
                       className="hover:bg-gray-50/50 transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600">
-                            {credit.user_name?.charAt(0)?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {credit.user_name || "—"}
-                            </p>
-                            <p className="text-[10px] font-mono text-gray-400">
-                              {credit.user_id.slice(0, 8)}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {credit.user_email}
+                        <p className="text-sm font-medium text-gray-900">
+                          {credit.user_name || "—"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {credit.user_email}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -227,22 +270,46 @@ export default function EmergencyCreditsPage() {
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
-                        {credit.activated_at
-                          ? format(
-                              new Date(credit.activated_at),
-                              "dd MMM yyyy HH:mm",
-                              { locale: es },
-                            )
+                        {formatDt(credit.call_initiated_at)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
+                        {credit.amount_usd != null
+                          ? `$${credit.amount_usd.toFixed(2)}`
                           : "—"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
-                        {credit.deactivated_at
-                          ? format(
-                              new Date(credit.deactivated_at),
-                              "dd MMM yyyy HH:mm",
-                              { locale: es },
-                            )
-                          : "—"}
+                        {credit.close_reason
+                          ? CLOSE_REASON_LABELS[credit.close_reason] ||
+                            credit.close_reason
+                          : formatDt(credit.deactivated_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {credit.status === "calling" ? (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === credit.credit_id}
+                              onClick={() =>
+                                handleCloseAttended(credit.credit_id)
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Atendida
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === credit.credit_id}
+                              onClick={() => handleRelease(credit.credit_id)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                              No contactado
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -250,19 +317,15 @@ export default function EmergencyCreditsPage() {
               </table>
             </div>
 
-            {/* Mobile cards */}
-            <div className="sm:hidden divide-y divide-gray-100">
+            <div className="lg:hidden divide-y divide-gray-100">
               {result.data.map((credit) => (
-                <div key={credit.credit_id} className="p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600">
-                      {credit.user_name?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                <div key={credit.credit_id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
                         {credit.user_name || "—"}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-gray-500">
                         {credit.user_email}
                       </p>
                     </div>
@@ -272,52 +335,57 @@ export default function EmergencyCreditsPage() {
                       {statusLabel(credit.status)}
                     </span>
                   </div>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    {credit.activated_at && (
-                      <span>
-                        Activado:{" "}
-                        {format(
-                          new Date(credit.activated_at),
-                          "dd MMM yyyy",
-                          { locale: es },
-                        )}
-                      </span>
+                  <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                    {credit.call_initiated_at && (
+                      <span>Llamada: {formatDt(credit.call_initiated_at)}</span>
                     )}
-                    {credit.deactivated_at && (
-                      <span>
-                        Desactivado:{" "}
-                        {format(
-                          new Date(credit.deactivated_at),
-                          "dd MMM yyyy",
-                          { locale: es },
-                        )}
-                      </span>
+                    {credit.amount_usd != null && (
+                      <span>${credit.amount_usd.toFixed(2)}</span>
                     )}
                   </div>
+                  {credit.status === "calling" && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === credit.credit_id}
+                        onClick={() => handleCloseAttended(credit.credit_id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Atendida
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === credit.credit_id}
+                        onClick={() => handleRelease(credit.credit_id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" />
+                        No contactado
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* Pagination */}
             <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
               <p className="text-xs text-gray-500">
                 {result.total} crédito{result.total !== 1 && "s"} · Página{" "}
-                {page} de {totalPages}
+                {page} de {totalPages || 1}
               </p>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                  className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>

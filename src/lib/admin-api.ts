@@ -129,6 +129,18 @@ export const adminApi = {
       `/admin/emergency-credits/active${buildQuery(params)}`,
     ),
 
+  closeEmergencyCreditAttended: (creditId: string) =>
+    apiClient<{ success: boolean; message: string; credit_id: string }>(
+      `/admin/emergency-credits/${creditId}/close-attended`,
+      { method: "POST" },
+    ),
+
+  releaseEmergencyCreditCall: (creditId: string) =>
+    apiClient<{ success: boolean; message: string; credit_id: string }>(
+      `/admin/emergency-credits/${creditId}/release`,
+      { method: "POST" },
+    ),
+
   knowledge: {
     list: (params?: {
       page?: number

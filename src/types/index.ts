@@ -370,6 +370,11 @@ export interface ActiveCreditUser {
   status: string
   activated_at: string | null
   deactivated_at: string | null
+  call_initiated_at?: string | null
+  close_reason?: string | null
+  amount_usd?: number | null
+  paid_at?: string | null
+  order_id?: string | null
 }
 
 export interface PaginatedActiveCredits {
