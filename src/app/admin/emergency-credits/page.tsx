@@ -49,6 +49,21 @@ function formatDt(value: string | null | undefined) {
   return format(new Date(value), "dd MMM yyyy HH:mm", { locale: es })
 }
 
+/** Motivo de cierre solo aplica a créditos cerrados (inactive). */
+function formatCloseCell(credit: {
+  status: string
+  close_reason?: string | null
+  deactivated_at?: string | null
+}) {
+  if (credit.status !== "inactive") return "—"
+  if (credit.close_reason) {
+    return (
+      CLOSE_REASON_LABELS[credit.close_reason] || credit.close_reason
+    )
+  }
+  return formatDt(credit.deactivated_at)
+}
+
 export default function EmergencyCreditsPage() {
   const [result, setResult] = useState<PaginatedActiveCredits | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -278,10 +293,7 @@ export default function EmergencyCreditsPage() {
                           : "—"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
-                        {credit.close_reason
-                          ? CLOSE_REASON_LABELS[credit.close_reason] ||
-                            credit.close_reason
-                          : formatDt(credit.deactivated_at)}
+                        {formatCloseCell(credit)}
                       </td>
                       <td className="px-4 py-3">
                         {credit.status === "calling" ? (
