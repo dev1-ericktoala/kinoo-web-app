@@ -1,12 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { api, ApiError } from "@/lib/api-client"
-import { KYNOO_POINTS_BRAND, ROUTES } from "@/lib/constants"
+import {
+  BENEFIT_TYPE_LABELS,
+  BENEFIT_TYPES_BY_PUBLICATION_TYPE,
+  KYNOO_POINTS_BRAND,
+  ROUTES,
+} from "@/lib/constants"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,6 +49,7 @@ import {
   sanitizeUserFilters,
 } from "./user-targeting-section"
 import { LocationPicker } from "./location-picker"
+import { PromotionImageUpload } from "./promotion-image-upload"
 import { Loader2, ArrowLeft, Info, MapPin } from "lucide-react"
 import type {
   Promotion,
@@ -57,12 +63,12 @@ import type {
 
 // ─── Schema ──────────────────────────────────────────────
 
-const formSchema = z.object({
-  type: z.enum(["promotion", "service"]),
-  title: z.string().min(3, "Mínimo 3 caracteres").max(255),
-  description: z.string().optional(),
-  benefit_type: z.enum(["discount", "free_product", "service", "points_only"]),
-  image_url: z.string().optional(),
+const formSchema = z
+  .object({
+    type: z.enum(["promotion", "service"]),
+    title: z.string().min(3, "Mínimo 3 caracteres").max(255),
+    description: z.string().optional(),
+    benefit_type: z.enum(["discount", "free_product", "service", "points_only"]),
   link: z
     .string()
     .refine((val) => val === "" || val.startsWith("https://"), {
@@ -88,9 +94,37 @@ const formSchema = z.object({
   business_whatsapp: z.string().optional(),
   service_price: z.coerce.number().min(0).optional(),
   is_presential: z.boolean(),
-})
+  })
+  .superRefine((data, ctx) => {
+    const allowed =
+      BENEFIT_TYPES_BY_PUBLICATION_TYPE[data.type] as readonly string[]
+    if (!allowed.includes(data.benefit_type)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["benefit_type"],
+        message:
+          data.type === "promotion"
+            ? 'Las promociones no pueden tener "Servicio" como tipo de beneficio'
+            : 'Los servicios deben tener "Servicio" como tipo de beneficio',
+      })
+    }
+  })
 
 type FormValues = z.infer<typeof formSchema>
+
+const IMAGE_UPLOAD_ERROR_TITLES = new Set([
+  "Imagen no permitida",
+  "No se pudo validar la imagen",
+  "Formato no válido",
+  "Archivo demasiado grande",
+  "Archivo inválido",
+  "Error al subir",
+])
+
+function isPromotionImageError(err: unknown, sentPhoto: boolean): boolean {
+  if (!sentPhoto || !(err instanceof ApiError)) return false
+  return IMAGE_UPLOAD_ERROR_TITLES.has(err.title || "")
+}
 
 // ─── Component ───────────────────────────────────────────
 
@@ -103,6 +137,9 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [imageRemoved, setImageRemoved] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [petFilters, setPetFilters] = useState<PetFilters>(
     () =>
       (initialData?.targeting?.pet_filters as PetFilters | undefined) || {},
@@ -120,7 +157,6 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
           title: initialData.title,
           description: initialData.description || "",
           benefit_type: initialData.benefit_type,
-          image_url: initialData.image_url || "",
           link: initialData.link || "",
           coupon_code: initialData.coupon_code || "",
           redeem_message: initialData.redeem_message || "",
@@ -147,7 +183,6 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
           title: "",
           description: "",
           benefit_type: "discount" as BenefitType,
-          image_url: "",
           link: "",
           coupon_code: "",
           redeem_message: "",
@@ -171,8 +206,20 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
   })
 
   const watchType = form.watch("type")
+  const watchBenefitType = form.watch("benefit_type")
   const watchHasLimitedStock = form.watch("has_limited_stock")
   const watchIsReferralOnly = form.watch("is_referral_only")
+
+  const allowedBenefitTypes = BENEFIT_TYPES_BY_PUBLICATION_TYPE[watchType]
+
+  useEffect(() => {
+    if (!allowedBenefitTypes.includes(watchBenefitType)) {
+      form.setValue(
+        "benefit_type",
+        watchType === "service" ? "service" : "discount",
+      )
+    }
+  }, [watchType, watchBenefitType, allowedBenefitTypes, form])
 
   async function onSubmit(values: FormValues) {
     if (values.end_date <= values.start_date) {
@@ -183,6 +230,7 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
     }
 
     setIsSubmitting(true)
+    setImageError(null)
 
     const targeting: Record<string, unknown> = {}
     // Sanitize: drop empty arrays and any value outside the API allow-list
@@ -196,12 +244,21 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
       targeting.user_filters = cleanedUserFilters
     }
 
+    let imageUrl: string | null = null
+    if (mode === "edit" && initialData) {
+      if (imageRemoved) {
+        imageUrl = null
+      } else if (!selectedImageFile) {
+        imageUrl = initialData.image_url || null
+      }
+    }
+
     const payload = {
       type: mode === "edit" && initialData ? initialData.type : values.type,
       title: values.title,
       description: values.description || null,
       benefit_type: values.benefit_type,
-      image_url: values.image_url || null,
+      image_url: imageUrl,
       link: values.link || null,
       coupon_code: values.coupon_code || null,
       redeem_message: values.redeem_message || null,
@@ -227,20 +284,25 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
       is_presential: values.is_presential,
     }
 
+    const photoToSend = selectedImageFile
+
     try {
       if (mode === "create") {
-        const created = await api.promotions.create(payload as CreatePromotionRequest)
+        const created = await api.promotions.create(
+          payload as CreatePromotionRequest,
+          photoToSend,
+        )
         toast({
           title: "Publicación creada",
           description: "Ahora puedes agregar ubicaciones en el mapa.",
         })
-        // Redirect to edit page so LocationPicker is immediately available
         router.push(ROUTES.EDIT_PROMOTION(created.id))
         return
       } else if (initialData) {
         await api.promotions.update(
           initialData.id,
           payload as UpdatePromotionRequest,
+          photoToSend,
         )
         toast({
           title: "Publicación actualizada",
@@ -249,9 +311,24 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
       }
       router.push(ROUTES.PROMOTIONS)
     } catch (err) {
+      const isImageError = isPromotionImageError(err, photoToSend != null)
+
+      if (isImageError) {
+        setImageError(
+          err instanceof ApiError
+            ? err.message
+            : "La imagen no cumple las políticas de contenido.",
+        )
+      }
+
       toast({
         variant: "destructive",
-        title: "Error",
+        title:
+          err instanceof ApiError
+            ? isImageError
+              ? err.title || "Imagen no permitida"
+              : err.title || "Error"
+            : "Error",
         description:
           err instanceof ApiError
             ? err.message
@@ -294,7 +371,14 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
                   key={t}
                   type="button"
                   disabled={isLocked}
-                  onClick={() => form.setValue("type", t)}
+                  onClick={() => {
+                    form.setValue("type", t)
+                    if (t === "service") {
+                      form.setValue("benefit_type", "service")
+                    } else if (form.getValues("benefit_type") === "service") {
+                      form.setValue("benefit_type", "discount")
+                    }
+                  }}
                   className={`flex-1 rounded-lg border-2 p-4 text-center transition-colors ${
                     isSelected
                       ? "border-foreground bg-muted/50"
@@ -360,33 +444,60 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
             <Label className="text-xs font-medium">Tipo de beneficio *</Label>
             <Select
               value={form.watch("benefit_type")}
+              disabled={watchType === "service"}
               onValueChange={(v) =>
                 form.setValue("benefit_type", v as BenefitType)
               }
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger
+                className={`h-9 ${watchType === "service" ? "opacity-70 cursor-not-allowed" : ""}`}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="discount">Descuento</SelectItem>
-                <SelectItem value="free_product">Producto gratis</SelectItem>
-                <SelectItem value="service">Servicio</SelectItem>
-                <SelectItem value="points_only">Solo Puntos KYNOO</SelectItem>
+                {allowedBenefitTypes.map((benefitType) => (
+                  <SelectItem key={benefitType} value={benefitType}>
+                    {BENEFIT_TYPE_LABELS[benefitType]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {watchType === "promotion" ? (
+              <p className="text-xs text-muted-foreground">
+                Las promociones admiten descuentos, productos gratis o canje por
+                puntos. Para ofrecer un servicio, elige &quot;Servicio&quot; como
+                tipo de publicación.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Los servicios siempre tienen beneficio &quot;Servicio&quot;. Este
+                campo queda fijo automáticamente.
+              </p>
+            )}
+            {form.formState.errors.benefit_type && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.benefit_type.message}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="image_url" className="text-xs font-medium">
-              URL de imagen
-            </Label>
-            <Input
-              id="image_url"
-              {...form.register("image_url")}
-              placeholder="https://..."
-              className="h-9"
-            />
-          </div>
+          <PromotionImageUpload
+            existingImageUrl={
+              imageRemoved ? null : initialData?.image_url || null
+            }
+            file={selectedImageFile}
+            onFileChange={(file) => {
+              setSelectedImageFile(file)
+              setImageRemoved(false)
+              setImageError(null)
+            }}
+            onClearExisting={() => {
+              setImageRemoved(true)
+              setImageError(null)
+            }}
+            error={imageError}
+            disabled={isSubmitting}
+          />
         </CardContent>
       </Card>
 

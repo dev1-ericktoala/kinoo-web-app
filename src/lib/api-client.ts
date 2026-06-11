@@ -153,16 +153,31 @@ export const api = {
       ),
     get: (id: string) =>
       apiClient<import("@/types").Promotion>(`/admin/promotions/${id}`),
-    create: (data: import("@/types").CreatePromotionRequest) =>
-      apiClient<import("@/types").Promotion>("/admin/promotions", {
+    create: (
+      data: import("@/types").CreatePromotionRequest,
+      photo?: File | null,
+    ) => {
+      const form = new FormData()
+      form.append("data", JSON.stringify(data))
+      if (photo) form.append("photo", photo)
+      return apiClient<import("@/types").Promotion>("/admin/promotions", {
         method: "POST",
-        body: JSON.stringify(data),
-      }),
-    update: (id: string, data: import("@/types").UpdatePromotionRequest) =>
-      apiClient<import("@/types").Promotion>(`/admin/promotions/${id}`, {
+        body: form,
+      })
+    },
+    update: (
+      id: string,
+      data: import("@/types").UpdatePromotionRequest,
+      photo?: File | null,
+    ) => {
+      const form = new FormData()
+      form.append("data", JSON.stringify(data))
+      if (photo) form.append("photo", photo)
+      return apiClient<import("@/types").Promotion>(`/admin/promotions/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
-      }),
+        body: form,
+      })
+    },
     patch: (id: string, data: import("@/types").UpdatePromotionRequest) =>
       apiClient<import("@/types").Promotion>(`/admin/promotions/${id}`, {
         method: "PATCH",

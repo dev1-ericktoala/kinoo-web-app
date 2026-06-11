@@ -77,6 +77,12 @@ export const BENEFIT_TYPE_LABELS: Record<string, string> = {
   points_only: "Solo Puntos KYNOO",
 }
 
+/** Tipos de beneficio permitidos según el tipo de publicación. */
+export const BENEFIT_TYPES_BY_PUBLICATION_TYPE = {
+  promotion: ["discount", "free_product", "points_only"],
+  service: ["service"],
+} as const
+
 export const PROMOTION_STATUS_LABELS: Record<string, string> = {
   active: "Activa",
   inactive: "Inactiva",
