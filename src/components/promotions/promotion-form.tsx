@@ -9,6 +9,7 @@ import { api, ApiError } from "@/lib/api-client"
 import {
   BENEFIT_TYPE_LABELS,
   BENEFIT_TYPES_BY_PUBLICATION_TYPE,
+  isBenefitAllowedForPublication,
   KYNOO_POINTS_BRAND,
   ROUTES,
 } from "@/lib/constants"
@@ -96,9 +97,7 @@ const formSchema = z
   is_presential: z.boolean(),
   })
   .superRefine((data, ctx) => {
-    const allowed =
-      BENEFIT_TYPES_BY_PUBLICATION_TYPE[data.type] as readonly string[]
-    if (!allowed.includes(data.benefit_type)) {
+    if (!isBenefitAllowedForPublication(data.type, data.benefit_type)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["benefit_type"],
@@ -213,7 +212,7 @@ export function PromotionForm({ initialData, mode }: PromotionFormProps) {
   const allowedBenefitTypes = BENEFIT_TYPES_BY_PUBLICATION_TYPE[watchType]
 
   useEffect(() => {
-    if (!allowedBenefitTypes.includes(watchBenefitType)) {
+    if (!isBenefitAllowedForPublication(watchType, watchBenefitType)) {
       form.setValue(
         "benefit_type",
         watchType === "service" ? "service" : "discount",

@@ -83,6 +83,17 @@ export const BENEFIT_TYPES_BY_PUBLICATION_TYPE = {
   service: ["service"],
 } as const
 
+export type PublicationType = keyof typeof BENEFIT_TYPES_BY_PUBLICATION_TYPE
+
+export function isBenefitAllowedForPublication(
+  publicationType: PublicationType,
+  benefitType: string,
+): boolean {
+  return (
+    BENEFIT_TYPES_BY_PUBLICATION_TYPE[publicationType] as readonly string[]
+  ).includes(benefitType)
+}
+
 export const PROMOTION_STATUS_LABELS: Record<string, string> = {
   active: "Activa",
   inactive: "Inactiva",
