@@ -206,7 +206,7 @@ export default function ReservationsPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Referencia o cliente…"
+                placeholder="Cliente, mascota o servicio…"
                 className={`${ADMIN_FILTER_INPUT_CLASS} pl-9`}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}

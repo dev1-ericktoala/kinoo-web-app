@@ -54,6 +54,7 @@ export function ReservationsTable({ items, searchQuery }: ReservationsTableProps
           <TableRow>
             <TableHead>Servicio</TableHead>
             <TableHead>Cliente</TableHead>
+            <TableHead>Mascota</TableHead>
             <TableHead>Pago</TableHead>
             <TableHead>Entrega</TableHead>
             <TableHead>Fecha pago</TableHead>
@@ -77,6 +78,13 @@ export function ReservationsTable({ items, searchQuery }: ReservationsTableProps
                     {order.buyer_email}
                   </p>
                 </div>
+              </TableCell>
+              <TableCell>
+                <span className="text-sm">
+                  {order.pet_name_snapshot?.trim() || (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </span>
               </TableCell>
               <TableCell>
                 <ReservationStatusBadge status={order.status} />

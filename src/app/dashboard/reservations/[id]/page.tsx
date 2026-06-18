@@ -12,7 +12,7 @@ import { ReservationStatusBadge } from "@/components/reservations/reservation-st
 import { ReservationFulfillmentPanel } from "@/components/reservations/reservation-fulfillment-panel"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, Mail, Phone } from "lucide-react"
+import { ArrowLeft, Mail, PawPrint, Phone } from "lucide-react"
 import type { PromotionPaidOrder } from "@/types"
 
 function formatUsd(value: number | string) {
@@ -154,6 +154,33 @@ export default function ReservationDetailPage() {
           />
         </dl>
       </section>
+
+      {order.pet_name_snapshot?.trim() ? (
+        <section className="rounded-lg border border-border/60 p-5 space-y-3">
+          <h3 className="text-sm font-semibold">Mascota</h3>
+          <div className="flex items-center gap-3">
+            {order.pet_photo_url_snapshot ? (
+              <img
+                src={order.pet_photo_url_snapshot}
+                alt={order.pet_name_snapshot}
+                className="h-12 w-12 rounded-full object-cover border border-border/60"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                <PawPrint className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {order.pet_name_snapshot}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Servicio reservado para esta mascota
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-lg border border-border/60 p-5 space-y-1">
         <h3 className="text-sm font-semibold mb-2">Pago</h3>

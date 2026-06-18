@@ -662,6 +662,9 @@ export interface PromotionPaidOrder {
   promotion_id: string
   provider_id: string
   buyer_user_id: string
+  pet_id: string | null
+  pet_name_snapshot: string | null
+  pet_photo_url_snapshot: string | null
   amount_usd: number | string
   currency: string
   status: PromotionPaidOrderStatus
