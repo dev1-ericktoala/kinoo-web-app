@@ -246,6 +246,67 @@ export const adminApi = {
         `/admin/credits/orders/${orderId}/refund`,
         { method: "POST" },
       ),
+
+    listPacks: () =>
+      apiClient<{
+        packs: Array<{
+          id: string
+          slug: string
+          label: string
+          amount_usd: number | string
+          credits: number | string
+          description: string
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }>
+        settings: import("@/types").CustomPurchaseSettings
+      }>("/admin/credits/packs"),
+
+    createPack: (data: {
+      slug: string
+      label: string
+      amount_usd: number
+      credits: number
+      description?: string
+      sort_order?: number
+      is_active?: boolean
+    }) =>
+      apiClient("/admin/credits/packs", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    updatePack: (
+      packId: string,
+      data: Partial<{
+        label: string
+        amount_usd: number
+        credits: number
+        description: string
+        sort_order: number
+        is_active: boolean
+      }>,
+    ) =>
+      apiClient(`/admin/credits/packs/${packId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+
+    updatePurchaseSettings: (data: Partial<{
+      credits_per_usd: number
+      min_custom_credits: number
+      max_custom_credits: number
+      custom_enabled: boolean
+    }>) =>
+      apiClient<import("@/types").CustomPurchaseSettings>(
+        "/admin/credits/purchase-settings",
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      ),
   },
 
   promotionReview: {

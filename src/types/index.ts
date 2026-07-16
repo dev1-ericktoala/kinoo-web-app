@@ -546,10 +546,18 @@ export interface CreditPack {
   description: string
 }
 
+export interface CustomPurchaseSettings {
+  enabled: boolean
+  credits_per_usd: number | string
+  min_credits: number | string
+  max_credits: number | string
+}
+
 export interface CreditPackListResponse {
   packs: CreditPack[]
   currency: string
   credits_per_usd: number | string
+  custom_purchase?: CustomPurchaseSettings
 }
 
 export interface ProviderCreditBalance {

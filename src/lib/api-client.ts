@@ -252,7 +252,10 @@ export const api = {
       apiClient<import("@/types").ProviderCreditTransactionList>(
         `/provider/credits/transactions?limit=${limit}&offset=${offset}`,
       ),
-    createOrder: (packId: string, idempotencyKey?: string) => {
+    createOrder: (
+      payload: { pack_id: string } | { credits: number },
+      idempotencyKey?: string,
+    ) => {
       const headers: Record<string, string> = {}
       if (idempotencyKey) {
         headers["Idempotency-Key"] = idempotencyKey
@@ -261,7 +264,7 @@ export const api = {
         "/provider/credits/orders",
         {
           method: "POST",
-          body: JSON.stringify({ pack_id: packId }),
+          body: JSON.stringify(payload),
           headers,
         },
       )

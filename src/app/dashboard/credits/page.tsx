@@ -11,12 +11,14 @@ import {
 import { CreditBalanceCard } from "@/components/credits/credit-balance-card"
 import { CreditsNonRefundableNotice } from "@/components/credits/credits-non-refundable-notice"
 import { CreditPacksGrid } from "@/components/credits/credit-packs-grid"
+import { CustomCreditPurchaseModal } from "@/components/credits/custom-credit-purchase"
 import { CreditTransactionsTable } from "@/components/credits/credit-transactions-table"
 import { NuveiCheckoutModal } from "@/components/credits/nuvei-checkout-modal"
 import { PendingPaymentBanner } from "@/components/credits/pending-payment-banner"
 import { Skeleton } from "@/components/ui/skeleton"
 import type {
   CreditPack,
+  CustomPurchaseSettings,
   ProviderCreditOrder,
   ProviderCreditLedgerEntry,
 } from "@/types"
@@ -46,6 +48,8 @@ export default function CreditsPage() {
   const { toast } = useToast()
   const { balance, refreshBalance } = useProviderCredits()
   const [packs, setPacks] = useState<CreditPack[]>([])
+  const [customPurchase, setCustomPurchase] =
+    useState<CustomPurchaseSettings | null>(null)
   const [transactions, setTransactions] = useState<ProviderCreditLedgerEntry[]>(
     [],
   )
@@ -57,6 +61,8 @@ export default function CreditsPage() {
   )
   const [isLoading, setIsLoading] = useState(true)
   const [purchasingPackId, setPurchasingPackId] = useState<string | null>(null)
+  const [isPurchasingCustom, setIsPurchasingCustom] = useState(false)
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false)
   const [isPolling, setIsPolling] = useState(false)
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const pollAttempts = useRef(0)
@@ -77,6 +83,7 @@ export default function CreditsPage() {
         api.credits.transactions(30, 0),
       ])
       setPacks(packsRes.packs)
+      setCustomPurchase(packsRes.custom_purchase ?? null)
       setTransactions(txRes.items)
 
       const storedOrderId =
@@ -202,15 +209,23 @@ export default function CreditsPage() {
     }
   }, [pendingOrder, pendingCheckoutUrl, refreshData, toast, clearPendingOrder])
 
-  async function handlePurchase(packId: string) {
-    setPurchasingPackId(packId)
+  async function startCheckout(
+    payload: { pack_id: string } | { credits: number },
+    loadingKey: string,
+  ) {
+    const isCustom = "credits" in payload
+    if (isCustom) {
+      setIsPurchasingCustom(true)
+    } else {
+      setPurchasingPackId(loadingKey)
+    }
     try {
       const idempotencyKey =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
-          : `${Date.now()}-${packId}`
+          : `${Date.now()}-${loadingKey}`
 
-      const res = await api.credits.createOrder(packId, idempotencyKey)
+      const res = await api.credits.createOrder(payload, idempotencyKey)
       const checkoutUrl = res.checkout_url ?? null
 
       setPendingOrder(res.order)
@@ -219,6 +234,9 @@ export default function CreditsPage() {
       if (checkoutUrl) {
         setPendingCheckoutUrl(checkoutUrl)
         sessionStorage.setItem(PENDING_CREDIT_CHECKOUT_URL_KEY, checkoutUrl)
+        if (isCustom) {
+          setIsCustomModalOpen(false)
+        }
         setIsCheckoutOpen(true)
       } else {
         setPendingCheckoutUrl(null)
@@ -239,7 +257,16 @@ export default function CreditsPage() {
       })
     } finally {
       setPurchasingPackId(null)
+      setIsPurchasingCustom(false)
     }
+  }
+
+  async function handlePurchase(packId: string) {
+    await startCheckout({ pack_id: packId }, packId)
+  }
+
+  async function handleCustomPurchase(credits: number) {
+    await startCheckout({ credits }, "custom")
   }
 
   if (isLoading) {
@@ -284,16 +311,29 @@ export default function CreditsPage() {
             Comprar créditos
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            1 crédito = 1 USD. Los créditos se usan al agregar ubicaciones en
-            tus promociones (los servicios no consumen créditos).
+            Elige un paquete o define una cantidad personalizada. 1 crédito = 1
+            USD. Se usan al agregar ubicaciones en tus promociones.
           </p>
         </div>
         <CreditPacksGrid
           packs={packs}
           purchasingPackId={purchasingPackId}
+          disabled={isPurchasingCustom}
+          showCustomOption={Boolean(customPurchase?.enabled)}
           onPurchase={handlePurchase}
+          onCustomClick={() => setIsCustomModalOpen(true)}
         />
       </section>
+
+      {customPurchase?.enabled && (
+        <CustomCreditPurchaseModal
+          open={isCustomModalOpen}
+          onOpenChange={setIsCustomModalOpen}
+          settings={customPurchase}
+          isPurchasing={isPurchasingCustom}
+          onPurchase={handleCustomPurchase}
+        />
+      )}
 
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-foreground">Historial</h2>
