@@ -29,6 +29,8 @@ import {
   Wallet,
   CalendarCheck,
 } from "lucide-react"
+import { KynooLogo } from "@/components/brand/kynoo-logo"
+import { PoweredByEleva } from "@/components/brand/powered-by-eleva"
 
 const mobileNavItems = [
   { label: "Inicio", href: ROUTES.DASHBOARD, icon: LayoutDashboard, exact: true },
@@ -75,15 +77,15 @@ export function Topbar() {
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[260px] p-0">
-          <div className="flex items-center h-14 px-5">
-            <span className="text-lg font-bold tracking-tight">KYNOO</span>
-            <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
+        <SheetContent side="left" className="flex w-[260px] flex-col p-0">
+          <div className="flex h-14 items-center gap-2 px-5">
+            <KynooLogo height={26} />
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
               Proveedor
             </span>
           </div>
           <Separator />
-          <nav className="px-3 py-3 space-y-0.5">
+          <nav className="flex-1 px-3 py-3 space-y-0.5">
             {mobileNavItems.map((item) => {
               const active = item.exact
                 ? pathname === item.href
@@ -106,6 +108,9 @@ export function Topbar() {
               )
             })}
           </nav>
+          <div className="flex justify-center border-t border-border/60 p-4">
+            <PoweredByEleva />
+          </div>
         </SheetContent>
       </Sheet>
 

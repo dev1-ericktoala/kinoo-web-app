@@ -16,6 +16,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { KynooLogo } from "@/components/brand/kynoo-logo"
+import { PoweredByEleva } from "@/components/brand/powered-by-eleva"
 
 const navItems = [
   {
@@ -64,14 +66,15 @@ export function Sidebar() {
     <aside className="hidden md:flex md:w-[240px] md:flex-col md:fixed md:inset-y-0 z-30">
       <div className="flex flex-col flex-1 bg-white border-r border-border/60">
         {/* Logo */}
-        <div className="flex items-center h-14 px-5">
+        <div className="flex h-14 items-center gap-2 px-5">
           <Link
             href={ROUTES.DASHBOARD}
-            className="text-lg font-bold tracking-tight text-foreground"
+            className="flex items-center"
+            aria-label="KYNOO — Inicio"
           >
-            KYNOO
+            <KynooLogo height={26} />
           </Link>
-          <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white bg-[#3f0068] px-1.5 py-0.5 rounded">
             Proveedor
           </span>
         </div>
@@ -100,8 +103,11 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-border/60">
+        {/* Powered by + Logout */}
+        <div className="space-y-3 border-t border-border/60 p-3">
+          <div className="flex justify-center px-1">
+            <PoweredByEleva />
+          </div>
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-destructive"

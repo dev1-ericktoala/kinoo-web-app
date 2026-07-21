@@ -23,6 +23,8 @@ import {
 import { ROUTES } from "@/lib/constants"
 import { useAdminBadges } from "@/providers/admin-provider"
 import { cn } from "@/lib/utils"
+import { KynooLogo } from "@/components/brand/kynoo-logo"
+import { PoweredByEleva } from "@/components/brand/powered-by-eleva"
 
 interface NavItem {
   icon: React.ElementType
@@ -99,11 +101,11 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-14 items-center border-b border-gray-200 px-5">
-        <span className="text-lg font-bold tracking-tight text-gray-900">
-          KYNOO
-        </span>
-        <span className="ml-2 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white uppercase tracking-wider">
+      <div className="flex h-14 items-center gap-2 border-b border-gray-200 px-5">
+        <Link href={ROUTES.ADMIN_DASHBOARD} aria-label="KYNOO — Dashboard">
+          <KynooLogo height={26} />
+        </Link>
+        <span className="rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white uppercase tracking-wider">
           Admin
         </span>
       </div>
@@ -133,8 +135,11 @@ export function AdminSidebar({ userName, onLogout }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* User + Logout */}
-      <div className="border-t border-gray-200 p-4">
+      {/* Powered by + User + Logout */}
+      <div className="space-y-3 border-t border-gray-200 p-4">
+        <div className="flex justify-center">
+          <PoweredByEleva />
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600">
             {userName.charAt(0).toUpperCase()}

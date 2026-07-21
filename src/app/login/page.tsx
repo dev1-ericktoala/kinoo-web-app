@@ -8,14 +8,9 @@ import { ROUTES, ADMIN_ROLES, PANEL_WEB_ROLES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { ArrowLeft, Loader2, Mail } from "lucide-react"
+import { KynooLogo } from "@/components/brand/kynoo-logo"
+import { PoweredByEleva } from "@/components/brand/powered-by-eleva"
+import { ArrowLeft, Loader2 } from "lucide-react"
 
 type Step = "email" | "otp"
 
@@ -64,7 +59,9 @@ export default function LoginPage() {
           userData.role_code as (typeof PANEL_WEB_ROLES)[number],
         )
       ) {
-        const isAdmin = ADMIN_ROLES.includes(userData.role_code as typeof ADMIN_ROLES[number])
+        const isAdmin = ADMIN_ROLES.includes(
+          userData.role_code as (typeof ADMIN_ROLES)[number],
+        )
         router.push(isAdmin ? ROUTES.ADMIN_DASHBOARD : ROUTES.PROMOTIONS)
       } else {
         throw new ApiError(
@@ -86,23 +83,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-[400px] shadow-lg border-border/50">
-        <CardHeader className="text-center space-y-2 pb-2">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-            <Mail className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <CardTitle className="text-xl font-semibold">
-            {step === "email" ? "Inicia sesión" : "Verifica tu código"}
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            {step === "email"
-              ? "Ingresa tu email para recibir un código de acceso"
-              : `Enviamos un código de 6 dígitos a ${email}`}
-          </CardDescription>
-        </CardHeader>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#f6f4f8]">
+      {/* Atmosphere */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(63,0,104,0.12), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(63,0,104,0.06), transparent 50%)",
+        }}
+      />
 
-        <CardContent className="pt-4">
+      {/* Top-left company logo */}
+      <header className="relative z-10 flex items-center px-6 pt-6 sm:px-8 sm:pt-8">
+        <KynooLogo height={32} priority className="drop-shadow-sm" />
+      </header>
+
+      {/* Auth form */}
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10">
+        <div className="w-full max-w-[400px] rounded-2xl border border-border/60 bg-white/90 p-8 shadow-[0_12px_40px_-16px_rgba(63,0,104,0.18)] backdrop-blur-sm">
+          <div className="mb-6 space-y-1.5 text-center">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              {step === "email" ? "Inicia sesión" : "Verifica tu código"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {step === "email"
+                ? "Ingresa tu email para recibir un código de acceso"
+                : `Enviamos un código de 6 dígitos a ${email}`}
+            </p>
+          </div>
+
           {step === "email" ? (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -116,14 +126,13 @@ export default function LoginPage() {
                   required
                   autoFocus
                   disabled={isLoading}
+                  className="h-11"
                 />
               </div>
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <Button
                 type="submit"
-                className="w-full"
+                className="h-11 w-full bg-[#3f0068] text-white hover:bg-[#3f0068]/90"
                 disabled={isLoading || !email}
               >
                 {isLoading ? (
@@ -139,6 +148,8 @@ export default function LoginPage() {
                 <Input
                   id="code"
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   placeholder="000000"
                   value={code}
                   onChange={(e) =>
@@ -148,15 +159,13 @@ export default function LoginPage() {
                   required
                   autoFocus
                   disabled={isLoading}
-                  className="text-center text-lg tracking-[0.5em] font-mono"
+                  className="h-11 text-center font-mono text-lg tracking-[0.5em]"
                 />
               </div>
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <Button
                 type="submit"
-                className="w-full"
+                className="h-11 w-full bg-[#3f0068] text-white hover:bg-[#3f0068]/90"
                 disabled={isLoading || code.length !== 6}
               >
                 {isLoading ? (
@@ -180,8 +189,13 @@ export default function LoginPage() {
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </main>
+
+      {/* Powered by Eleva */}
+      <footer className="relative z-10 flex justify-center pb-8 pt-2">
+        <PoweredByEleva />
+      </footer>
     </div>
   )
 }
