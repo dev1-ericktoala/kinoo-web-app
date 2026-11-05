@@ -12,6 +12,7 @@ const ADMIN_PREFIXES = [
   ROUTES.ADMIN_PROMOTION_FULFILLMENTS,
   ROUTES.ADMIN_PRODUCT_ORDERS,
   ROUTES.ADMIN_PUBLICATIONS,
+  ROUTES.ADMIN_SUBSCRIPTIONS,
   ROUTES.ADMIN_ACTIVE_SUBSCRIPTIONS,
   ROUTES.ADMIN_KYNOO_REDEMPTIONS,
   ROUTES.ADMIN_REFERRAL_CODES,
@@ -24,6 +25,7 @@ const ADMIN_PREFIXES = [
 const ROLE_PREFIXES: Record<AdminPanelRole, readonly string[]> = {
   admin: ADMIN_PREFIXES,
   operator_igs: [
+    ROUTES.ADMIN_SUBSCRIPTIONS,
     ROUTES.ADMIN_ACTIVE_SUBSCRIPTIONS,
     ROUTES.ADMIN_EMERGENCY_CREDITS,
   ],
@@ -42,7 +44,7 @@ export function isAdminPanelRole(role: string | null | undefined): role is Admin
 
 export function panelHomeForRole(role: string | null | undefined): string | null {
   if (role === "admin") return ROUTES.ADMIN_DASHBOARD
-  if (role === "operator_igs") return ROUTES.ADMIN_ACTIVE_SUBSCRIPTIONS
+  if (role === "operator_igs") return ROUTES.ADMIN_SUBSCRIPTIONS
   if (role === "operator") return ROUTES.ADMIN_KYNOO_REDEMPTIONS
   if (role === "provider") return ROUTES.PROMOTIONS
   return null

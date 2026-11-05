@@ -33,6 +33,7 @@ import type {
   AdminPromotionPaidOrderRefundResponse,
   AdminSubscriptionList,
   AdminActiveSubscriptionList,
+  AdminSubscriptionPublicationList,
   AdminSubscriptionNote,
   AdminSubscriptionNoteList,
   AdminSubscriptionContractDetail,
@@ -407,6 +408,10 @@ export const adminApi = {
   },
 
   petCareSubscriptions: {
+    publications: (params?: { page?: number; limit?: number }) =>
+      apiClient<AdminSubscriptionPublicationList>(
+        `/admin/subscriptions/publications${buildQuery(params || {})}`,
+      ),
     list: (promotionId: string) =>
       apiClient<AdminSubscriptionList>(
         `/admin/subscriptions${buildQuery({ promotion_id: promotionId })}`,
@@ -426,7 +431,12 @@ export const adminApi = {
   },
 
   activeSubscriptions: {
-    list: (params?: { search?: string; page?: number; limit?: number }) =>
+    list: (params?: {
+      search?: string
+      page?: number
+      limit?: number
+      promotion_id?: string
+    }) =>
       apiClient<AdminActiveSubscriptionList>(
         `/admin/subscriptions/active${buildQuery(params || {})}`,
       ),

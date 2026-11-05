@@ -1269,6 +1269,24 @@ export interface AdminActiveSubscriptionList {
   limit: number
 }
 
+export interface AdminSubscriptionPublication {
+  id: string
+  title: string
+  is_active: boolean
+  active_contracts: number
+  created_at: string | null
+  image_url?: string | null
+  media_type?: string | null
+  video_thumbnail_url?: string | null
+}
+
+export interface AdminSubscriptionPublicationList {
+  items: AdminSubscriptionPublication[]
+  total: number
+  page: number
+  limit: number
+}
+
 export interface AdminSubscriptionNote {
   id: string
   user_subscription_id: string

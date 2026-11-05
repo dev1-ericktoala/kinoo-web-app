@@ -22,13 +22,17 @@ export const ROUTES = {
   ADMIN_AD_CREDITS: "/admin/ad-credits",
   ADMIN_PROMOTION_FULFILLMENTS: "/admin/promotion-fulfillments",
   ADMIN_PRODUCT_ORDERS: "/admin/product-orders",
+  ADMIN_SUBSCRIPTIONS: "/admin/subscriptions",
+  ADMIN_SUBSCRIPTIONS_ALL_ACTIVE: "/admin/subscriptions/active",
+  ADMIN_SUBSCRIPTION_FICHA: (id: string) => `/admin/subscriptions/${id}`,
+  /** @deprecated Usar ADMIN_SUBSCRIPTIONS_ALL_ACTIVE; se mantiene por redirects. */
   ADMIN_ACTIVE_SUBSCRIPTIONS: "/admin/active-subscriptions",
   ADMIN_KYNOO_REDEMPTIONS: "/admin/kynoo-redemptions",
   ADMIN_PUBLICATIONS: "/admin/publications",
   ADMIN_NEW_PUBLICATION: "/admin/publications/new",
   ADMIN_EDIT_PUBLICATION: (id: string) => `/admin/publications/${id}`,
   ADMIN_SUBSCRIPTION_CONTRACTS: (id: string) =>
-    `/admin/publications/${id}/subscriptions`,
+    `/admin/subscriptions/${id}?tab=contracts`,
   ADMIN_REFERRAL_CODES: "/admin/referral-codes",
   ADMIN_PROVIDERS: "/admin/providers",
   ADMIN_TEAM: "/admin/team",

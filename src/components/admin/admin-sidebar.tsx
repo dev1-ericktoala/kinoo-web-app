@@ -77,8 +77,8 @@ export function AdminSidebar({
     },
     {
       icon: ClipboardList,
-      label: "Suscripciones activas",
-      href: ROUTES.ADMIN_ACTIVE_SUBSCRIPTIONS,
+      label: "Suscripciones",
+      href: ROUTES.ADMIN_SUBSCRIPTIONS,
       roles: ["admin", "operator_igs"],
     },
     {
