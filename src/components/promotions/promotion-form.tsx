@@ -59,6 +59,11 @@ import { PromotionImageUpload } from "./promotion-image-upload"
 import { PromotionVideoUpload } from "./promotion-video-upload"
 import { PROMOTION_VIDEO_MAX_DURATION_SECONDS } from "@/lib/promotion-video"
 import { PromotionVideoThumbnailUpload } from "./promotion-video-thumbnail-upload"
+import {
+  PROMOTION_TAG_MAX,
+  PromotionTagsInput,
+  normalizePromotionTag,
+} from "./promotion-tags-input"
 import { Loader2, ArrowLeft, Info, MapPin, ImageIcon, Film } from "lucide-react"
 import type {
   Promotion,
@@ -116,6 +121,16 @@ const PUBLICATION_TYPE_COPY = {
   },
 } as const
 
+const TITLE_PLACEHOLDER_BY_TYPE: Record<PromotionType, string> = {
+  promotion: "Ej. 20% en alimento premium para perro",
+  service: "Ej. Baño y peluquería a domicilio",
+  product: "Ej. Cama ortopédica para perro mediano",
+  subscription: "Ej. Kynoo Pet Care",
+}
+
+const DESCRIPTION_PLACEHOLDER =
+  "Qué ofreces y para qué mascota. Evita solo eslóganes: Kynoo usa este texto para recomendarte en el chat."
+
 // ─── Schema ──────────────────────────────────────────────
 
 function buildFormSchema(isAdmin: boolean) {
@@ -124,6 +139,13 @@ function buildFormSchema(isAdmin: boolean) {
       type: z.enum(["promotion", "service", "subscription", "product"]),
       title: z.string().min(3, "Mínimo 3 caracteres").max(255),
       description: z.string().optional(),
+      tags: z
+        .array(z.string())
+        .min(
+          1,
+          "Agrega al menos una etiqueta (ej. baño, alimento, cama)",
+        )
+        .max(PROMOTION_TAG_MAX, `Máximo ${PROMOTION_TAG_MAX} etiquetas`),
       benefit_type: z.enum([
         "discount",
         "free_product",
@@ -236,6 +258,18 @@ function buildFormSchema(isAdmin: boolean) {
               : 'Los servicios deben tener "Servicio" como tipo de beneficio',
         })
       }
+
+      const normalizedTags = (data.tags || [])
+        .map((t) => normalizePromotionTag(t))
+        .filter((t): t is string => Boolean(t))
+      const unique = Array.from(new Set(normalizedTags))
+      if (unique.length < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tags"],
+          message: "Agrega al menos una etiqueta (ej. baño, alimento, cama)",
+        })
+      }
     })
 }
 
@@ -332,6 +366,9 @@ export function PromotionForm({
           type: initialData.type,
           title: initialData.title,
           description: initialData.description || "",
+          tags: (initialData.tags || [])
+            .map((t) => normalizePromotionTag(t))
+            .filter((t): t is string => Boolean(t)),
           benefit_type: initialData.benefit_type,
           monthly_price: formatPriceInput(initialData.monthly_price),
           yearly_price: formatPriceInput(initialData.yearly_price),
@@ -370,6 +407,7 @@ export function PromotionForm({
           type: "promotion" as PromotionType,
           title: "",
           description: "",
+          tags: [],
           benefit_type: "discount" as BenefitType,
           monthly_price: "",
           yearly_price: "",
@@ -574,10 +612,19 @@ export function PromotionForm({
         : null
       : null
 
+    const tags = Array.from(
+      new Set(
+        (values.tags || [])
+          .map((t) => normalizePromotionTag(t))
+          .filter((t): t is string => Boolean(t)),
+      ),
+    ).slice(0, PROMOTION_TAG_MAX)
+
     const payload = {
       type: publicationType,
       title: values.title,
       description: values.description || null,
+      tags,
       benefit_type: isSubscription
         ? "subscription"
         : isProduct
@@ -920,9 +967,12 @@ export function PromotionForm({
             <Input
               id="title"
               {...form.register("title")}
-              placeholder="Nombre de tu publicación"
+              placeholder={TITLE_PLACEHOLDER_BY_TYPE[watchType]}
               className="h-9"
             />
+            <p className="text-[11px] text-muted-foreground">
+              Describe qué ofreces (no solo un eslogan genérico).
+            </p>
             {form.formState.errors.title && (
               <p className="text-xs text-destructive">
                 {form.formState.errors.title.message}
@@ -937,10 +987,21 @@ export function PromotionForm({
             <Textarea
               id="description"
               {...form.register("description")}
-              placeholder="Describe tu publicación..."
+              placeholder={DESCRIPTION_PLACEHOLDER}
               rows={3}
             />
           </div>
+
+          <PromotionTagsInput
+            value={form.watch("tags") || []}
+            onChange={(next) =>
+              form.setValue("tags", next, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            error={form.formState.errors.tags?.message}
+          />
 
           {watchType === "subscription" ? (
             <div className="space-y-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">

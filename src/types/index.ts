@@ -169,6 +169,8 @@ export interface Promotion {
   type: PromotionType
   title: string
   description: string | null
+  /** Etiquetas de descubrimiento (baño, alimento, …). Ausente o [] en pubs legacy. */
+  tags?: string[]
   benefit_type: BenefitType
   image_url: string | null
   /** Modo exclusivo: image | video. Default image. */
@@ -320,6 +322,8 @@ export interface CreatePromotionRequest {
   type?: PromotionType
   title: string
   description?: string | null
+  /** Etiquetas de descubrimiento. Fase 1 opcional; Fase 3 mín. 1 en UI. */
+  tags?: string[]
   benefit_type: BenefitType
   image_url?: string | null
   /** image | video — exclusivo (XOR). Default image. */
@@ -366,6 +370,8 @@ export interface UpdatePromotionRequest {
   type?: PromotionType | null
   title?: string | null
   description?: string | null
+  /** Si se envía, reemplaza tags. Fase 1 permite []. */
+  tags?: string[] | null
   benefit_type?: BenefitType | null
   image_url?: string | null
   /** image | video — exclusivo (XOR). */
