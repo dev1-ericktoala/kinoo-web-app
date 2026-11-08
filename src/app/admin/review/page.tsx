@@ -10,6 +10,7 @@ import { CITY_COVERAGE_LABEL, POINT_COVERAGE_LABEL } from "@/lib/geo-coverage"
 import { useAdminBadges } from "@/providers/admin-provider"
 import { AdminReviewLocationsMap } from "@/components/admin/admin-review-locations-map"
 import { AdminPromotionMediaPanel } from "@/components/admin/admin-promotion-media-panel"
+import { KynooAllyIcon } from "@/components/promotions/kynoo-ally-marker"
 import {
   CheckCircle,
   XCircle,
@@ -266,6 +267,15 @@ function ReviewCard({
                   {BENEFIT_TYPE_LABELS[promo.benefit_type] ||
                     promo.benefit_type}
                 </span>
+                {promo.is_kynoo_ally ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-[#4a6b1e]/10 text-[#4a6b1e]"
+                    title="El proveedor marcó esta publicación como Aliado Kynoo Pet Care"
+                  >
+                    <KynooAllyIcon className="h-3 w-3" />
+                    Aliado Kynoo Pet Care
+                  </span>
+                ) : null}
               </div>
               <h3 className="text-lg font-semibold text-[#111827] leading-snug">
                 {promo.title}
@@ -313,6 +323,12 @@ function ReviewCard({
               value={`${fmt(promo.start_date)} — ${fmt(promo.end_date)}`}
             />
             <Detail label="Creada" value={fmt(promo.created_at)} />
+            {(promo.type === "promotion" || promo.type === "service") && (
+              <Detail
+                label="Aliado Kynoo Pet Care"
+                value={promo.is_kynoo_ally ? "Sí — marcado por el proveedor" : "No"}
+              />
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3">

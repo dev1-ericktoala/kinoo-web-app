@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { StatusBadge } from "./status-badge"
 import { ActiveToggle } from "./active-toggle"
+import { KynooAllyListMarker } from "./kynoo-ally-marker"
 import {
   Tooltip,
   TooltipContent,
@@ -169,9 +170,12 @@ export function PromotionsTable({
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs font-normal">
-                      {PROMOTION_TYPE_LABELS[promo.type] || promo.type}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {PROMOTION_TYPE_LABELS[promo.type] || promo.type}
+                      </Badge>
+                      {promo.is_kynoo_ally ? <KynooAllyListMarker /> : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge

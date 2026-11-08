@@ -188,6 +188,14 @@ export interface Promotion {
   city_id: string | null
   targeting: Record<string, unknown>
   is_featured_eligible: boolean
+  /**
+   * Aliado Kynoo Pet Care (promoción/servicio).
+   * Ausente o false en pubs legacy / product / subscription.
+   */
+  is_kynoo_ally?: boolean
+  /** Contacto Mayordomo (solo feed app; el panel puede ignorarlos). */
+  mayordomo_phone?: string | null
+  mayordomo_whatsapp?: string | null
   business_name: string | null
   business_address: string | null
   business_phone: string | null
@@ -336,6 +344,8 @@ export interface CreatePromotionRequest {
   city_id?: string | null
   targeting?: Record<string, unknown>
   is_featured_eligible?: boolean
+  /** Aliado Kynoo Pet Care. Solo promotion|service; el backend fuerza false en otros. */
+  is_kynoo_ally?: boolean
   business_name?: string | null
   business_address?: string | null
   business_phone?: string | null
@@ -388,6 +398,8 @@ export interface UpdatePromotionRequest {
   city_id?: string | null
   targeting?: Record<string, unknown> | null
   is_featured_eligible?: boolean | null
+  /** Aliado Kynoo Pet Care. Solo promotion|service. */
+  is_kynoo_ally?: boolean | null
   business_name?: string | null
   business_address?: string | null
   business_phone?: string | null

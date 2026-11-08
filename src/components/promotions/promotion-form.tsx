@@ -65,6 +65,7 @@ import {
   normalizePromotionTag,
 } from "./promotion-tags-input"
 import { Loader2, ArrowLeft, Info, MapPin, ImageIcon, Film } from "lucide-react"
+import { KynooAllyIcon } from "./kynoo-ally-marker"
 import type {
   Promotion,
   PromotionAudienceMode,
@@ -175,6 +176,7 @@ function buildFormSchema(isAdmin: boolean) {
       end_date: z.date(),
       is_active: z.boolean(),
       is_featured_eligible: z.boolean(),
+      is_kynoo_ally: z.boolean(),
       business_name: z.string().optional(),
       business_address: z.string().optional(),
       business_phone: z.string().optional(),
@@ -395,6 +397,7 @@ export function PromotionForm({
           end_date: new Date(initialData.end_date),
           is_active: initialData.is_active,
           is_featured_eligible: initialData.is_featured_eligible,
+          is_kynoo_ally: Boolean(initialData.is_kynoo_ally),
           business_name: initialData.business_name || "",
           business_address: initialData.business_address || "",
           business_phone: initialData.business_phone || "",
@@ -425,6 +428,7 @@ export function PromotionForm({
           end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           is_active: true,
           is_featured_eligible: false,
+          is_kynoo_ally: false,
           business_name: isAdmin ? KYNOO_PUBLISHER_NAME : "",
           business_address: "",
           business_phone: "",
@@ -439,8 +443,11 @@ export function PromotionForm({
   const watchBenefitType = form.watch("benefit_type")
   const watchHasLimitedStock = form.watch("has_limited_stock")
   const watchIsReferralOnly = form.watch("is_referral_only")
+  const watchIsKynooAlly = form.watch("is_kynoo_ally")
   const watchMinReferralPoints = form.watch("min_referral_points_required")
   const watchPointsCost = form.watch("points_cost")
+  const canBeKynooAlly =
+    watchType === "promotion" || watchType === "service"
 
   const allowedBenefitTypes = BENEFIT_TYPES_BY_PUBLICATION_TYPE[watchType]
 
@@ -651,6 +658,10 @@ export function PromotionForm({
       end_date: values.end_date.toISOString(),
       is_active: values.is_active,
       is_featured_eligible: values.is_featured_eligible,
+      is_kynoo_ally:
+        isService || publicationType === "promotion"
+          ? Boolean(values.is_kynoo_ally)
+          : false,
       country_id: null,
       city_id: null,
       targeting,
@@ -924,10 +935,12 @@ export function PromotionForm({
                       form.setValue("is_referral_only", false)
                     } else if (t === "subscription") {
                       form.setValue("benefit_type", "subscription")
+                      form.setValue("is_kynoo_ally", false)
                     } else if (t === "product") {
                       form.setValue("benefit_type", "product")
                       form.setValue("points_cost", 0)
                       form.setValue("is_referral_only", false)
+                      form.setValue("is_kynoo_ally", false)
                     } else if (form.getValues("benefit_type") === "service") {
                       form.setValue("benefit_type", "discount")
                     }
@@ -1818,6 +1831,31 @@ export function PromotionForm({
               onCheckedChange={(v) => form.setValue("is_featured_eligible", v)}
             />
           </div>
+
+          {canBeKynooAlly ? (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label className="text-xs font-medium inline-flex items-center gap-1.5">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-md border border-[#4a6b1e]/30 bg-[#4a6b1e]/10 text-[#4a6b1e]">
+                    <KynooAllyIcon className="h-3 w-3" />
+                  </span>
+                  Aliado Kynoo Pet Care
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Solo actívalo si tu negocio es aliado de Kynoo Pet Care y este
+                  beneficio forma parte de esa alianza. En la app, el usuario
+                  podrá contactar al equipo de Kynoo para confirmar si aplica a
+                  su suscripción. Si no eres aliado, déjalo desactivado.
+                </p>
+              </div>
+              <Switch
+                checked={watchIsKynooAlly}
+                onCheckedChange={(v) =>
+                  form.setValue("is_kynoo_ally", v, { shouldDirty: true })
+                }
+              />
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

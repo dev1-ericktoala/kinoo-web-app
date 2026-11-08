@@ -29,6 +29,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminNotifyZoneButton } from "./admin-notify-zone-button"
 import { AdminSuspensionToggle } from "./admin-suspension-toggle"
 import { AdminPublicationMediaButton } from "./admin-publication-media-button"
+import { KynooAllyListMarker } from "@/components/promotions/kynoo-ally-marker"
 import type { Promotion, PromotionPublisherType, PromotionType } from "@/types"
 
 type FilterTab = "all" | "active" | "suspended" | "rejected"
@@ -305,9 +306,12 @@ export function AdminPublicationsTable({
                     <AdminPublicationMediaButton promotion={promo} />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs font-normal">
-                      {PROMOTION_TYPE_LABELS[promo.type] || promo.type}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {PROMOTION_TYPE_LABELS[promo.type] || promo.type}
+                      </Badge>
+                      {promo.is_kynoo_ally ? <KynooAllyListMarker /> : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge
