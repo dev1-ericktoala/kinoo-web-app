@@ -25,6 +25,7 @@ import type {
   AdminProviderCreditOrder,
   AdminProviderCreditOrderList,
 } from "@/types"
+import { AccountingFlatFileButton } from "@/components/admin/accounting-flat-file-button"
 import { AdminCsvExportDialog } from "@/components/admin/admin-csv-export-dialog"
 import { CheckoutSnapshotView } from "@/components/admin/checkout-snapshot-view"
 import { useAdminUser } from "@/providers/admin-provider"
@@ -309,22 +310,34 @@ export default function AdminAdCreditsPage() {
                       })}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {!readOnly && order.status === "paid" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-amber-800 border-amber-200 hover:bg-amber-50"
-                          onClick={() => {
-                            setRefundError(null)
-                            setRefundTarget(order)
-                          }}
-                        >
-                          <Undo2 className="h-3.5 w-3.5 mr-1" />
-                          Reembolsar
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
+                      <div className="inline-flex flex-wrap justify-end gap-2">
+                        {order.status === "paid" ? (
+                          <AccountingFlatFileButton
+                            onFetch={() =>
+                              adminApi.adCredits.fetchAccountingFlatFile(
+                                order.id,
+                              )
+                            }
+                          />
+                        ) : null}
+                        {!readOnly && order.status === "paid" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-amber-800 border-amber-200 hover:bg-amber-50"
+                            onClick={() => {
+                              setRefundError(null)
+                              setRefundTarget(order)
+                            }}
+                          >
+                            <Undo2 className="h-3.5 w-3.5 mr-1" />
+                            Reembolsar
+                          </Button>
+                        ) : null}
+                        {order.status !== "paid" ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -372,20 +385,30 @@ export default function AdminAdCreditsPage() {
                     locale: es,
                   })}
                 </p>
-                {!readOnly && order.status === "paid" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setRefundError(null)
-                      setRefundTarget(order)
-                    }}
-                  >
-                    <Undo2 className="h-3.5 w-3.5 mr-1" />
-                    Reembolsar
-                  </Button>
-                )}
+                <div className="flex flex-col gap-2">
+                  {order.status === "paid" ? (
+                    <AccountingFlatFileButton
+                      fullWidth
+                      onFetch={() =>
+                        adminApi.adCredits.fetchAccountingFlatFile(order.id)
+                      }
+                    />
+                  ) : null}
+                  {!readOnly && order.status === "paid" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setRefundError(null)
+                        setRefundTarget(order)
+                      }}
+                    >
+                      <Undo2 className="h-3.5 w-3.5 mr-1" />
+                      Reembolsar
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

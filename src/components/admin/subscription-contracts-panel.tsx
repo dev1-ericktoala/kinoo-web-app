@@ -11,6 +11,7 @@ import type {
   AdminSubscriptionContract,
   AdminSubscriptionContractDetail,
 } from "@/types"
+import { AccountingFlatFileButton } from "@/components/admin/accounting-flat-file-button"
 import { CheckoutSnapshotView } from "@/components/admin/checkout-snapshot-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -285,9 +286,7 @@ export function SubscriptionContractsPanel({
                                 <TableHead className="text-xs">Facturación</TableHead>
                                 <TableHead className="text-xs">Transaction ID</TableHead>
                                 <TableHead className="text-xs">Authorization Code</TableHead>
-                                {!readOnly ? (
-                                  <TableHead className="text-xs" />
-                                ) : null}
+                                <TableHead className="text-xs">Acciones</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -319,9 +318,18 @@ export function SubscriptionContractsPanel({
                                   <TableCell className="font-mono text-xs">
                                     {charge.authorization_code || "—"}
                                   </TableCell>
-                                  {!readOnly ? (
-                                    <TableCell>
-                                      {charge.refundable ? (
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-2">
+                                      {charge.status === "paid" ? (
+                                        <AccountingFlatFileButton
+                                          onFetch={() =>
+                                            adminApi.petCareSubscriptions.fetchAccountingFlatFile(
+                                              charge.id,
+                                            )
+                                          }
+                                        />
+                                      ) : null}
+                                      {!readOnly && charge.refundable ? (
                                         <Button
                                           type="button"
                                           size="sm"
@@ -335,8 +343,8 @@ export function SubscriptionContractsPanel({
                                           Reembolsar
                                         </Button>
                                       ) : null}
-                                    </TableCell>
-                                  ) : null}
+                                    </div>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>

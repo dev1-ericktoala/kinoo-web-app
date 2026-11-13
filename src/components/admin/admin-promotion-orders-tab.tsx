@@ -22,6 +22,7 @@ import {
   PROMOTION_PAID_ORDER_STATUS_LABELS,
 } from "@/lib/constants"
 import type { AdminPromotionPaidOrderListItem } from "@/types"
+import { AccountingFlatFileButton } from "@/components/admin/accounting-flat-file-button"
 import { CheckoutSnapshotView } from "@/components/admin/checkout-snapshot-view"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -387,19 +388,32 @@ export function AdminPromotionOrdersTab({
                       })}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {!readOnly && item.refundable ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-purple-700 border-purple-200 hover:bg-purple-50"
-                          onClick={() => openRefund(item)}
-                        >
-                          <Undo2 className="h-3.5 w-3.5 mr-1" />
-                          Reembolsar
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
+                      <div className="inline-flex flex-wrap justify-end gap-2">
+                        {item.status === "paid" ? (
+                          <AccountingFlatFileButton
+                            onFetch={() =>
+                              adminApi.promotionOrders.fetchAccountingFlatFile(
+                                item.id,
+                              )
+                            }
+                          />
+                        ) : null}
+                        {!readOnly && item.refundable ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-purple-700 border-purple-200 hover:bg-purple-50"
+                            onClick={() => openRefund(item)}
+                          >
+                            <Undo2 className="h-3.5 w-3.5 mr-1" />
+                            Reembolsar
+                          </Button>
+                        ) : null}
+                        {item.status !== "paid" &&
+                        !(!readOnly && item.refundable) ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -434,17 +448,29 @@ export function AdminPromotionOrdersTab({
                 <p className="text-xs text-gray-500">
                   Entrega: {phaseLabel(item.fulfillment_phase)}
                 </p>
-                {!readOnly && item.refundable && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-purple-700 border-purple-200"
-                    onClick={() => openRefund(item)}
-                  >
-                    <Undo2 className="h-3.5 w-3.5 mr-1" />
-                    Reembolsar
-                  </Button>
-                )}
+                <div className="flex flex-col gap-2">
+                  {item.status === "paid" ? (
+                    <AccountingFlatFileButton
+                      fullWidth
+                      onFetch={() =>
+                        adminApi.promotionOrders.fetchAccountingFlatFile(
+                          item.id,
+                        )
+                      }
+                    />
+                  ) : null}
+                  {!readOnly && item.refundable ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-purple-700 border-purple-200"
+                      onClick={() => openRefund(item)}
+                    >
+                      <Undo2 className="h-3.5 w-3.5 mr-1" />
+                      Reembolsar
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

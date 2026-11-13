@@ -72,6 +72,63 @@ function buildQuery(params: Record<string, unknown>): string {
   return str ? `?${str}` : ""
 }
 
+function filenameFromContentDisposition(
+  header: string | null,
+  fallback: string,
+): string {
+  if (!header) return fallback
+  const match = /filename\*?=(?:UTF-8''|")?([^\";]+)"?/i.exec(header)
+  if (!match?.[1]) return fallback
+  try {
+    return decodeURIComponent(match[1].trim())
+  } catch {
+    return match[1].trim()
+  }
+}
+
+export function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export type AccountingFlatFilePayload = {
+  blob: Blob
+  filename: string
+  text: string
+}
+
+/** Obtiene el archivo plano de una orden/cargo pagado. */
+async function fetchAccountingFlatFile(
+  path: string,
+  fallbackFilename = "kynoo-factura.csv",
+): Promise<AccountingFlatFilePayload> {
+  const token = getAccessToken()
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({} as { detail?: unknown }))
+    const detail = err?.detail
+    throw new Error(
+      typeof detail === "string" ? detail : "No se pudo obtener el archivo",
+    )
+  }
+  const text = await res.text()
+  const filename = filenameFromContentDisposition(
+    res.headers.get("Content-Disposition"),
+    fallbackFilename,
+  )
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8" })
+  return { blob, filename, text }
+}
+
 export const adminApi = {
   providers: {
     list: (params?: {
@@ -202,6 +259,11 @@ export const adminApi = {
         `/admin/emergency-orders${buildQuery(params)}`,
       ),
 
+    fetchAccountingFlatFile: (orderId: string) =>
+      fetchAccountingFlatFile(
+        `/admin/emergency-orders/${orderId}/accounting-flat-file`,
+      ),
+
     refund: (
       orderId: string,
       data: { reason: string; force?: boolean },
@@ -311,6 +373,11 @@ export const adminApi = {
       }
       return res.blob()
     },
+
+    fetchAccountingFlatFile: (orderId: string) =>
+      fetchAccountingFlatFile(
+        `/admin/credits/orders/${orderId}/accounting-flat-file`,
+      ),
 
     refundOrder: (orderId: string) =>
       apiClient<ProviderCreditOrderRefundResponse>(
@@ -427,6 +494,11 @@ export const adminApi = {
           method: "POST",
           body: JSON.stringify({ reason }),
         },
+      ),
+
+    fetchAccountingFlatFile: (chargeId: string) =>
+      fetchAccountingFlatFile(
+        `/admin/subscriptions/charges/${chargeId}/accounting-flat-file`,
       ),
   },
 
@@ -663,6 +735,11 @@ export const adminApi = {
         `/admin/promotion-orders/${orderId}`,
       ),
 
+    fetchAccountingFlatFile: (orderId: string) =>
+      fetchAccountingFlatFile(
+        `/admin/promotion-orders/${orderId}/accounting-flat-file`,
+      ),
+
     refund: (
       orderId: string,
       data: { reason: string; force?: boolean },
@@ -690,6 +767,11 @@ export const adminApi = {
     get: (orderId: string) =>
       apiClient<import("@/types").AdminProductOrderSummary>(
         `/admin/product-orders/${orderId}`,
+      ),
+
+    fetchAccountingFlatFile: (orderId: string) =>
+      fetchAccountingFlatFile(
+        `/admin/product-orders/${orderId}/accounting-flat-file`,
       ),
 
     updateShipping: (

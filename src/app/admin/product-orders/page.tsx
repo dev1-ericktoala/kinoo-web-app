@@ -14,6 +14,7 @@ import {
 import { adminApi } from "@/lib/admin-api"
 import { ApiError } from "@/lib/api-client"
 import { useAdminUser } from "@/providers/admin-provider"
+import { AccountingFlatFileButton } from "@/components/admin/accounting-flat-file-button"
 import { CheckoutSnapshotView } from "@/components/admin/checkout-snapshot-view"
 import { Button } from "@/components/ui/button"
 import {
@@ -358,6 +359,15 @@ export default function AdminProductOrdersPage() {
                                 "Entregar"
                               )}
                             </Button>
+                          ) : null}
+                          {item.status === "paid" ? (
+                            <AccountingFlatFileButton
+                              onFetch={() =>
+                                adminApi.productOrders.fetchAccountingFlatFile(
+                                  item.id,
+                                )
+                              }
+                            />
                           ) : null}
                           {!readOnly && item.refundable ? (
                             <Button
